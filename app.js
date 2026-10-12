@@ -487,12 +487,12 @@ function answer(i){
   const sourceSign=signId?ROAD_SIGNS.find(x=>x.id===signId):null;
   const signBlock=sourceSign?signSourceExplanation(sourceSign):"";
 
-  const hasPDD=!!(q.explainPDD&&Number(q.explainPDDMatchScore)>=6);
+  const hasPDD=!!(q.explainPDD&&q.explainPDDVerified&&Number(q.explainPDDMatchScore)>=8);
   const genericPDD=hasPDD
     ? `<div class="pdd-explanation">
         <div class="pdd-explanation-head">
-          <div><span class="micro">Пояснение по ПДД</span><h4>Почему этот ответ правильный</h4></div>
-          <a class="btn pdd-source-btn" href="docs/pravilaPDD.pdf#page=${q.explainPDDPage}" target="_blank" rel="noopener">ПДД · стр. ${q.explainPDDPage} ↗</a>
+          <div><span class="micro">Пояснение по ПДД · проверено по теме вопроса</span><h4>Почему этот ответ правильный</h4></div>
+          <a class="btn pdd-source-btn" href="docs/pravilaPDD.pdf#page=${q.explainPDDPage}" target="_blank" rel="noopener">ПДД · п. ${esc(q.explainPDDPoint||"—")} · стр. ${q.explainPDDPage} ↗</a>
         </div>
         <blockquote>${esc(q.explainPDD)}</blockquote>
         ${ruleSignCards(q.explainPDD)}

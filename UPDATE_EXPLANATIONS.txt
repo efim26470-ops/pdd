@@ -1,0 +1,30 @@
+ПДД+ v10.0.4
+
+Заменить на GitHub:
+- app.js
+- sw.js
+- data/questions.js
+- data/questions.json
+- data/meta.js
+
+НЕ нужно перезагружать:
+- tickets-*
+- signs-*
+- markings-01
+- docs/
+- icons/
+- data/signs.js
+- data/markings.js
+- data/rules.js
+- styles.css
+
+Что исправлено:
+- correct/correctNumber проверены для всех 800 вопросов;
+- пояснения теперь ищутся только внутри тематического раздела ПДД;
+- низкоуверенные совпадения удалены вместо показа случайного пункта;
+- в комментарии показывается номер пункта ПДД и страница PDF;
+- билет 8, вопрос 14 исправлен на п. 13.11 ПДД.
+
+После публикации GitHub Pages:
+Ctrl+Shift+R.
+Если PWA держит старый кэш: Application → Service Workers → Unregister → Reload.
