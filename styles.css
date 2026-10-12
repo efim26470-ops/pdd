@@ -775,3 +775,12 @@ html[data-theme="light"] .question-media.real-loaded{background:#eee}
     max-height:198px!important;
   }
 }
+
+
+/* ---- v9.8: marking quiz asks for meaning/name, number only after answer ---- */
+.marking-answer-meta{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:12px;
+}
+.marking-answer-meta b{color:var(--text)}

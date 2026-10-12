@@ -268,9 +268,35 @@ function buildSignTest(cat=""){
 function buildMarkingTest(){
   const chosen=[...ROAD_MARKINGS].sort(()=>Math.random()-.5).slice(0,Math.min(20,ROAD_MARKINGS.length));
   return chosen.map((m,idx)=>{
-    const others=ROAD_MARKINGS.filter(x=>x.id!==m.id).sort(()=>Math.random()-.5).slice(0,3);
-    const answers=[m.id,...others.map(x=>x.id)].sort(()=>Math.random()-.5);
-    return {id:`mark-${m.id}-${idx}`,topic:"Дорожная разметка",q:"Какой номер имеет изображённая дорожная разметка?",answers,correct:answers.indexOf(m.id),explain:`Это разметка ${m.id}. ${m.meaning||""}`,_markingId:m.id,official:false,type:"marking"};
+    const unique=new Map();
+    ROAD_MARKINGS
+      .filter(x=>x.id!==m.id&&x.quizName!==m.quizName)
+      .forEach(x=>{if(!unique.has(x.quizName))unique.set(x.quizName,x)});
+
+    const same=[...unique.values()].filter(x=>x.kind===m.kind).sort(()=>Math.random()-.5);
+    const other=[...unique.values()].filter(x=>x.kind!==m.kind).sort(()=>Math.random()-.5);
+    const distract=[];
+    for(const x of [...same,...other]){
+      if(!distract.some(d=>d.quizName===x.quizName)){
+        distract.push(x);
+        if(distract.length===3)break
+      }
+    }
+
+    const answers=[m.quizName,...distract.map(x=>x.quizName)].sort(()=>Math.random()-.5);
+    return {
+      id:`mark-${m.id}-${idx}`,
+      topic:"Дорожная разметка",
+      q:"Что означает изображённая дорожная разметка?",
+      answers,
+      correct:answers.indexOf(m.quizName),
+      explain:`Разметка ${m.id}. ${m.meaning||""}`,
+      explainSource:"razmetka.pdf",
+      explainSourcePage:m.sourcePage,
+      _markingId:m.id,
+      official:false,
+      type:"marking"
+    };
   })
 }
 
@@ -397,8 +423,20 @@ function answer(i){
   });
 
   const correctText=q.answers[q.correct];
+  const isMarking=q.type==="marking"&&q._markingId;
+  const marking= isMarking ? ROAD_MARKINGS.find(x=>x.id===q._markingId) : null;
+  const markingBlock=marking
+    ? `<div class="pdd-explanation">
+        <div class="pdd-explanation-head">
+          <div><span class="micro">Пояснение по разметке</span><h4>${esc(marking.quizName)}</h4></div>
+          <a class="btn pdd-source-btn" href="docs/razmetka.pdf#page=${marking.sourcePage}" target="_blank" rel="noopener">razmetka.pdf · стр. ${marking.sourcePage} ↗</a>
+        </div>
+        <blockquote>${esc(marking.meaning||"")}</blockquote>
+        <div class="marking-answer-meta">Номер разметки: <b>${esc(marking.id)}</b></div>
+      </div>`
+    : "";
   const hasPDD=!!(q.explainPDD&&Number(q.explainPDDMatchScore)>=6);
-  const pddBlock=hasPDD
+  const pddBlock=isMarking ? markingBlock : hasPDD
     ? `<div class="pdd-explanation">
         <div class="pdd-explanation-head">
           <div><span class="micro">Пояснение по ПДД</span><h4>Почему этот ответ правильный</h4></div>
