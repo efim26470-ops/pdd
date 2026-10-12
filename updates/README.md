@@ -34,7 +34,7 @@ JSON-массив. Минимальные поля вопроса:
   "answers": ["Ответ 1", "Ответ 2", "Ответ 3"],
   "correct": 1,
   "explain": "Пояснение",
-  "image": "https://.../image.svg"
+  "image": "https://.../image.png"
 }
 ```
 
