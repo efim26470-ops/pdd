@@ -520,6 +520,14 @@ function car(i,gi=0){
     <div class="card glass section"><h3>Обзоры в интернете</h3><div class="actions"><a class="btn" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q}">YouTube ↗</a><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${d}">Drom ↗</a><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${r}">Drive2 ↗</a></div></div>
     <div class="actions"><a class="btn" href="#cars">← Каталог</a></div>`)
 }
+function next(){
+  let e=st.exam;
+  if(!e)return;
+  e.i++;
+  e.answered=false;
+  if(e.i>=e.qs.length)result();
+  else rq()
+}
 function fav(id){st.favorites=st.favorites.includes(id)?st.favorites.filter(x=>x!==id):[...st.favorites,id];store.set("favorites:"+BANK_KEY,st.favorites);msg("Избранное обновлено");st.exam?rq():favorites()}
 function reset(){if(confirm("Сбросить статистику и ошибки?")){st.answers=[];st.mistakes=[];store.set("answers:"+BANK_KEY,[]);store.set("mistakes:"+BANK_KEY,[]);stats()}}
 
