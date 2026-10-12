@@ -718,3 +718,60 @@ html[data-theme="light"] .question-media.real-loaded{background:#eee}
     padding:12px 13px;
   }
 }
+
+
+/* ---- v9.7: stable sign viewport in tests ---- */
+.question-sign.source-sign-media{
+  position:relative!important;
+  box-sizing:border-box!important;
+  height:320px!important;
+  min-height:320px!important;
+  padding:18px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  background:#fff!important;
+}
+
+.question-sign.source-sign-media .source-sign-img{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate(-50%,-50%)!important;
+
+  width:auto!important;
+  height:auto!important;
+
+  /* Never enlarge a square sign until it becomes a giant crop. */
+  max-width:min(calc(100% - 56px),520px)!important;
+  max-height:264px!important;
+
+  object-fit:contain!important;
+  object-position:center center!important;
+  padding:0!important;
+  margin:0!important;
+}
+
+.question-sign.source-sign-media figcaption{
+  position:absolute!important;
+  z-index:5!important;
+  right:10px!important;
+  bottom:10px!important;
+  left:auto!important;
+  top:auto!important;
+}
+
+@media(max-width:620px){
+  .question-sign.source-sign-media{
+    height:245px!important;
+    min-height:245px!important;
+    padding:14px!important;
+  }
+  .question-sign.source-sign-media .source-sign-img{
+    max-width:calc(100% - 40px)!important;
+    max-height:198px!important;
+  }
+}

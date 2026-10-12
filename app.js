@@ -226,14 +226,41 @@ function qNavigator(e){
   return `<div class="qnav">${e.qs.map((_,i)=>`<span class="qnum ${i===e.i?"current":""} ${i<e.i?"done":""}">${i+1}</span>`).join("")}</div>`
 }
 function buildSignTest(cat=""){
-  const visual=ROAD_SIGNS.filter(s=>(!cat||s.cat===cat)&&(s.imageLocal||(s.imageCandidates&&s.imageCandidates.length)));
+  const visual=ROAD_SIGNS.filter(s=>(!cat||s.cat===cat)&&s.image);
   const chosen=[...visual].sort(()=>Math.random()-.5).slice(0,Math.min(20,visual.length));
+
   return chosen.map((s,idx)=>{
-    let same=ROAD_SIGNS.filter(x=>(x.cat===s.cat)&&x.id!==s.id);
-    let distract=[...same].sort(()=>Math.random()-.5).slice(0,3);
-    if(distract.length<3)distract.push(...ROAD_SIGNS.filter(x=>x.id!==s.id&&!distract.includes(x)).sort(()=>Math.random()-.5).slice(0,3-distract.length));
-    let answers=[s.name,...distract.map(x=>x.name)].sort(()=>Math.random()-.5);
-    return {id:`sign-${s.id}-${idx}`,topic:s.cat,q:"Что означает этот дорожный знак?",answers,correct:answers.indexOf(s.name),explain:`Знак ${s.id} «${s.name}».`,_signId:s.id,imageType:"sign",official:false,type:"sign_name"};
+    // Do not offer another sign with exactly the same official/group title:
+    // it would create two visually different but textually identical answers.
+    const uniqueByName=new Map();
+    ROAD_SIGNS
+      .filter(x=>x.id!==s.id&&x.name!==s.name)
+      .forEach(x=>{if(!uniqueByName.has(x.name))uniqueByName.set(x.name,x)});
+
+    const same=[...uniqueByName.values()].filter(x=>x.cat===s.cat).sort(()=>Math.random()-.5);
+    const other=[...uniqueByName.values()].filter(x=>x.cat!==s.cat).sort(()=>Math.random()-.5);
+
+    const distract=[];
+    for(const x of [...same,...other]){
+      if(!distract.some(d=>d.name===x.name)){
+        distract.push(x);
+        if(distract.length===3)break
+      }
+    }
+
+    const answers=[s.name,...distract.map(x=>x.name)].sort(()=>Math.random()-.5);
+    return {
+      id:`sign-${s.id}-${idx}`,
+      topic:s.cat,
+      q:"Что означает этот дорожный знак?",
+      answers,
+      correct:answers.indexOf(s.name),
+      explain:`Знак ${s.id} «${s.name}».`,
+      _signId:s.id,
+      imageType:"sign",
+      official:false,
+      type:"sign_name"
+    };
   })
 }
 
