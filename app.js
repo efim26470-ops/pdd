@@ -351,18 +351,48 @@ function rq(){
     </aside>
   </div>`)
 }
-function answer(i){let e=st.exam;if(e.answered)return;e.answered=true;let q=e.qs[e.i],ok=i===q.correct;if(ok)e.score++;e.history[e.i]=ok;st.answers.push({id:q.id,ok,ts:Date.now()});store.set("answers:"+BANK_KEY,st.answers);if(ok)st.mistakes=st.mistakes.filter(x=>x!==q.id);else if(!st.mistakes.includes(q.id))st.mistakes.push(q.id);store.set("mistakes:"+BANK_KEY,st.mistakes);$$(".answer").forEach((b,n)=>{b.disabled=true;if(n===q.correct)b.classList.add("correct");if(n===i&&!ok)b.classList.add("wrong")});$("#explain").innerHTML=`<div class="explain"><b>${ok?"Верно":"Ошибка"}</b><div class="micro" style="font-size:13px;margin-top:7px">${esc(q.explain)}</div><div class="actions"><button class="btn btn-primary" onclick="PDD.next()">Следующий →</button></div></div>`}
-function next(){st.exam.i++;st.exam.answered=false;rq()}function result(){let e=st.exam,v=Math.round(e.score/e.qs.length*100);app.innerHTML=shell("Готово",`Результат «${esc(e.label)}».`,`<div class="card glass section"><div class="big-num">${e.score}/${e.qs.length}</div><p class="lead">${v}% правильных</p><div class="progress"><i style="width:${v}%"></i></div><div class="actions"><button class="btn btn-primary" onclick="PDD.start()">Ещё экзамен</button><a class="btn" href="#mistakes">Ошибки</a></div></div>`)}
-function tickets(){
-  const answered=new Set(st.answers.map(a=>String(a.id)));
-  const tickets=[...new Set(PDD_QUESTIONS.map(q=>q.ticket).filter(Boolean))].sort((a,b)=>a-b);
-  app.innerHTML=shell("40 экзаменационных билетов A/B/M","Импортированы из предоставленного PDF: по 20 вопросов и ответы из таблицы на стр. 404.",`
-  <div class="ticket-grid section">${tickets.map(t=>{
-    const qs=PDD_QUESTIONS.filter(q=>q.ticket===t),done=qs.filter(q=>answered.has(String(q.id))).length;
-    const pics=qs.filter(q=>q.image).length;
-    return `<button class="ticket-card glass" onclick="PDD.ticket(${t})"><span class="ticket-no">${String(t).padStart(2,"0")}</span><span class="micro">${done}/${qs.length} отвечено · ${pics} илл.</span><div class="progress"><i style="width:${qs.length?done/qs.length*100:0}%"></i></div></button>`
-  }).join("")}</div>
-  <div class="notice section">Нумерация вопросов и билетов сохранена из PDF. Встроено ${PDD_QUESTIONS.filter(q=>q.image).length} исходных иллюстраций; вопросы без изображения в PDF отображаются без изображения.</div>`)
+function answer(i){
+  let e=st.exam;if(e.answered)return;
+  e.answered=true;
+  let q=e.qs[e.i],ok=i===q.correct;
+  if(ok)e.score++;
+  e.history[e.i]=ok;
+  st.answers.push({id:q.id,ok,ts:Date.now()});
+  store.set("answers:"+BANK_KEY,st.answers);
+  if(ok)st.mistakes=st.mistakes.filter(x=>x!==q.id);
+  else if(!st.mistakes.includes(q.id))st.mistakes.push(q.id);
+  store.set("mistakes:"+BANK_KEY,st.mistakes);
+
+  $$(".answer").forEach((b,n)=>{
+    b.disabled=true;
+    if(n===q.correct)b.classList.add("correct");
+    if(n===i&&!ok)b.classList.add("wrong")
+  });
+
+  const correctText=q.answers[q.correct];
+  const hasPDD=!!(q.explainPDD&&Number(q.explainPDDMatchScore)>=6);
+  const pddBlock=hasPDD
+    ? `<div class="pdd-explanation">
+        <div class="pdd-explanation-head">
+          <div><span class="micro">Пояснение по ПДД</span><h4>Почему этот ответ правильный</h4></div>
+          <a class="btn pdd-source-btn" href="docs/pravilaPDD.pdf#page=${q.explainPDDPage}" target="_blank" rel="noopener">ПДД · стр. ${q.explainPDDPage} ↗</a>
+        </div>
+        <blockquote>${esc(q.explainPDD)}</blockquote>
+        ${ruleSignCards(q.explainPDD)}
+      </div>`
+    : `<div class="pdd-explanation pdd-explanation-missing">
+        <div class="pdd-explanation-head"><div><span class="micro">Пояснение по ПДД</span><h4>В предоставленном PDF точный фрагмент не найден</h4></div></div>
+        <p>Правильный ответ подтверждён таблицей ответов билетов, но я не подставляю случайный пункт ПДД вместо подходящего объяснения.</p>
+      </div>`;
+
+  $("#explain").innerHTML=`<div class="explain answer-result">
+    <div class="answer-verdict ${ok?"is-correct":"is-wrong"}">
+      <b>${ok?"Верно":"Неверно"}</b>
+      ${ok?"":`<span>Правильный ответ: <strong>${esc(correctText)}</strong></span>`}
+    </div>
+    ${pddBlock}
+    <div class="actions"><button class="btn btn-primary" onclick="PDD.next()">Следующий →</button></div>
+  </div>`
 }
 function mistakes(){let qs=PDD_QUESTIONS.filter(q=>st.mistakes.includes(q.id));app.innerHTML=shell("Ошибки","После правильного ответа вопрос исчезает из этого списка.",qs.length?`<div class="card glass section"><div class="big-num">${qs.length}</div><p class="muted">к повторению</p><button class="btn btn-primary" onclick="PDD.start(PDD.err(),'Ошибки',20)">Повторить</button></div>`:`<div class="card glass section"><h3>Чисто.</h3><p class="muted">Ошибок пока нет.</p></div>`)}
 function stats(){let z=p();app.innerHTML=shell("Прогресс","Хранится локально на устройстве.",`<div class="grid g3 section"><div class="card glass"><div class="big-num">${z.pct}%</div><div class="micro">точность</div></div><div class="card glass"><div class="big-num">${st.answers.length}</div><div class="micro">ответов</div></div><div class="card glass"><div class="big-num">${st.mistakes.length}</div><div class="micro">ошибок</div></div></div><div class="actions"><a class="btn" href="#favorites">Избранное</a><a class="btn" href="#bank">Банк вопросов</a><a class="btn" href="#updates">Обновления</a><a class="btn" href="#data">Статус данных</a><button class="btn" onclick="PDD.reset()">Сбросить</button></div>`)}
@@ -398,7 +428,7 @@ function markings(){
 function fm(){
   let q=($("#mq")?.value||"").toLowerCase(),k=$("#mk")?.value||"";
   let a=ROAD_MARKINGS.filter(m=>(!k||m.kind===k)&&(!q||(`${m.id} ${m.meaning}`).toLowerCase().includes(q)));
-  $("#mgrid").innerHTML=a.map(m=>`<article class="card glass marking-card"><figure class="marking-media"><img src="${m.image}" alt="${esc(m.name)}" loading="lazy" onerror="PDD.mediaError(this)"><figcaption>${esc(m.id)}</figcaption></figure><div class="marking-copy"><span class="tag">${esc(m.kind)} · ${esc(m.id)}</span><h3>${esc(m.name)}</h3><p class="micro source-meaning">${esc(m.meaning)}</p><span class="micro">razmetka.pdf · стр. ${m.sourcePage}</span></div></article>`).join("")
+  $("#mgrid").innerHTML=a.map(m=>`<article class="card glass marking-card"><figure class="marking-media"><img src="${m.image}" alt="${esc(m.name)}" loading="lazy" onerror="PDD.mediaError(this)"><figcaption>№ ${esc(m.id)}</figcaption></figure><div class="marking-copy"><span class="tag">${esc(m.kind)} · ${esc(m.id)}</span><h3>${esc(m.name)}</h3><p class="micro source-meaning">${esc(m.meaning)}</p><span class="micro">razmetka.pdf · стр. ${m.sourcePage}</span></div></article>`).join("")
 }
 function rules(){
   app.innerHTML=shell("Правила дорожного движения",`${PDD_RULES.length} страниц из предоставленного pravilaPDD.pdf.`,`
