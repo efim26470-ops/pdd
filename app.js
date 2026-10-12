@@ -9,6 +9,7 @@ if(hasCompatibleSync){
 }
 const BANK_KEY=hasCompatibleSync?`sync:${synced.version}`:"pdf:pddmaster-12.1";
 const st={answers:store.get("answers:"+BANK_KEY,[]),mistakes:store.get("mistakes:"+BANK_KEY,[]),favorites:store.get("favorites:"+BANK_KEY,[]),favoriteItems:store.get("favoriteItems:"+BANK_KEY,{}),exam:null,deferred:null};
+const signView={limit:32,key:""};
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
 const MEDIA_API="https://commons.wikimedia.org/w/api.php";
@@ -190,7 +191,7 @@ function signKind(cat=""){if(cat.includes("Предупреж"))return"warning";
 function signVisual(s,extra=""){
   if(!s)return"";
   return `<figure class="sign-media ${extra} source-sign-media">
-    <img class="source-sign-img" src="${s.image}" alt="${esc(s.name)}" loading="lazy" onerror="PDD.mediaError(this)">
+    <img class="source-sign-img" src="${s.image}" alt="${esc(s.name)}" loading="lazy" decoding="async" fetchpriority="low" onerror="PDD.mediaError(this)">
     <figcaption>${esc(s.id)} · стр. ${s.sourcePage||"—"}</figcaption>
   </figure>`
 }
@@ -537,10 +538,69 @@ function favorites(){
     <div class="list">${qs.slice(0,150).map(q=>`<div class="row"><span><strong>${esc(q.q)}</strong><small>${esc(q.topic||"Тренировка")}${q._savedReason==="wrong"?" · добавлено после ошибки":""}</small></span><button class="round" onclick='PDD.fav(${JSON.stringify(q.id)})'>★</button></div>`).join("")}</div>`
     :`<div class="card glass">Пока пусто. Ошибочные ответы будут добавляться сюда автоматически.</div>`)
 }
-function fs(){
-  let q=($("#sq")?.value||"").toLowerCase(),c=$("#sc")?.value||"";
-  let a=ROAD_SIGNS.filter(s=>(!c||s.cat===c)&&(!q||(`${s.id} ${s.name} ${s.meaning||""}`).toLowerCase().includes(q)));
-  $("#sg").innerHTML=a.map(s=>`<article class="card glass sign-card">${signVisual(s)}<div class="sign-copy"><span class="tag">${esc(s.id)} · ${esc(s.cat)}</span><h3>${esc(s.name)}</h3><p class="micro source-meaning">${esc(s.meaning||"")}</p><div class="source-row"><span class="micro">znaki.pdf · стр. ${s.sourcePage}</span><button class="btn sign-test-btn" onclick='PDD.signOne(${JSON.stringify(s.id)})'>Проверить себя</button></div></div></article>`).join("")
+function signs(){
+  const cats=[...new Set(ROAD_SIGNS.map(s=>s.cat).filter(Boolean))];
+  signView.limit=32;signView.key="";
+  app.innerHTML=shell(
+    "Дорожные знаки",
+    `${ROAD_SIGNS.length} знаков из предоставленного znaki.pdf.`,
+    `<div class="toolbar signs-toolbar">
+      <input class="input" id="sq" placeholder="Номер, название или описание" oninput="PDD.fs()">
+      <select class="select" id="sc" onchange="PDD.fs()">
+        <option value="">Все категории</option>
+        ${cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}
+      </select>
+      <button class="btn btn-primary" onclick="PDD.signCat()">Тест по категории</button>
+      <a class="btn" href="docs/znaki.pdf" target="_blank" rel="noopener">Открыть PDF ↗</a>
+    </div>
+    <div class="sign-test-strip">
+      ${cats.map(c=>`<button class="chip" onclick='PDD.signCat(${JSON.stringify(c)})'>${esc(c)}</button>`).join("")}
+    </div>
+    <div id="signCount" class="sign-count micro"></div>
+    <div id="sg" class="sign-grid section"></div>
+    <div id="signMore" class="sign-more"></div>
+    <div class="notice section">Все изображения знаков локальные PNG. Для производительности каталог показывает знаки порциями; поиск и фильтры работают по всем ${ROAD_SIGNS.length} позициям.</div>`
+  );
+  fs(true)
+}
+
+function fs(reset=false){
+  const q=($("#sq")?.value||"").trim().toLowerCase();
+  const c=$("#sc")?.value||"";
+  const key=`${c}\u0000${q}`;
+  if(reset||key!==signView.key){signView.key=key;signView.limit=32}
+
+  const all=ROAD_SIGNS.filter(s=>
+    (!c||s.cat===c)&&
+    (!q||(`${s.id} ${s.name} ${s.meaning||""} ${s.sourceDescription||""}`).toLowerCase().includes(q))
+  );
+  const shown=all.slice(0,signView.limit);
+  const grid=$("#sg"),count=$("#signCount"),more=$("#signMore");
+  if(!grid)return;
+
+  grid.innerHTML=shown.length?shown.map(s=>`
+    <article class="card sign-card sign-card-lite">
+      ${signVisual(s)}
+      <div class="sign-copy">
+        <span class="tag">${esc(s.id)} · ${esc(s.cat)}</span>
+        <h3>${esc(s.name)}</h3>
+        <p class="micro source-meaning">${esc(s.meaning||"")}</p>
+        <div class="source-row">
+          <span class="micro">znaki.pdf · стр. ${s.sourcePage}</span>
+          <button class="btn sign-test-btn" onclick='PDD.signOne(${JSON.stringify(s.id)})'>Проверить себя</button>
+        </div>
+      </div>
+    </article>`).join("")
+    :`<div class="card sign-empty">Ничего не найдено.</div>`;
+
+  if(count)count.textContent=all.length?`Показано ${shown.length} из ${all.length}`:"0 результатов";
+  if(more)more.innerHTML=shown.length<all.length
+    ?`<button class="btn sign-more-btn" onclick="PDD.moreSigns()">Показать ещё ${Math.min(32,all.length-shown.length)}</button>`
+    :""
+}
+function moreSigns(){
+  signView.limit+=32;
+  fs(false)
 }
 
 function markings(){
@@ -893,7 +953,7 @@ window.PDD={reviewLastErrors,retryTest,favQs:favoriteQuestions,mediaError,
   imgNext,topic:t=>start(PDD_QUESTIONS.filter(q=>q.topic===t),t,20,true),
   ticket:t=>start(PDD_QUESTIONS.filter(q=>q.ticket===t),`Билет ${t}`,20,false),
   pack:i=>start(PDD_QUESTIONS.slice(i*20,i*20+20),`Набор ${i+1}`,20,false),
-  answer,next,fav,fs,fm,frules:filterRules,rulePage:renderRulePage,fc,fb:filterBank,single,car,reset,
+  answer,next,fav,fs,moreSigns,fm,frules:filterRules,rulePage:renderRulePage,fc,fb:filterBank,single,car,reset,
   update:()=>checkUpdates(false),resetSynced,resetMediaCache,
   err:()=>PDD_QUESTIONS.filter(q=>st.mistakes.includes(q.id))
 };

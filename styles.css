@@ -908,3 +908,43 @@ html[data-theme="light"] .question-media.real-loaded{background:#eee}
   .topic-stat-meter{grid-column:1/-1;grid-row:2}
   .favorite-summary{align-items:stretch;flex-direction:column}
 }
+
+
+/* ---- v10.0.3: fast signs catalogue ---- */
+.sign-count{
+  margin:14px 2px 0;
+  min-height:18px;
+}
+.sign-card-lite{
+  background:linear-gradient(145deg,var(--panel2),var(--panel));
+  border:1px solid var(--line);
+  box-shadow:var(--shadow);
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+  content-visibility:auto;
+  contain:layout paint style;
+  contain-intrinsic-size:320px 420px;
+}
+.sign-card-lite .sign-media{
+  transform:translateZ(0);
+}
+.sign-card-lite .source-sign-img{
+  contain:paint;
+}
+.sign-more{
+  display:flex;
+  justify-content:center;
+  padding:4px 0 22px;
+}
+.sign-more-btn{
+  min-width:210px;
+}
+.sign-empty{
+  grid-column:1/-1;
+  padding:26px;
+  color:var(--muted);
+  text-align:center;
+}
+@media(max-width:760px){
+  .sign-card-lite{contain-intrinsic-size:280px 380px}
+}

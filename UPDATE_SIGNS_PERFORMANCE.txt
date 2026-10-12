@@ -1,0 +1,21 @@
+ПДД+ v10.0.3 — fix зависания раздела «Знаки»
+
+Если у вас уже v10.0.2, заменить только:
+- app.js
+- styles.css
+- sw.js
+- data/meta.js
+
+НЕ нужно загружать заново:
+- data/signs.js
+- signs-01 ... signs-04
+- tickets-*
+- markings-01
+- docs/
+- icons/
+
+После GitHub Pages:
+1. Ctrl+Shift+R
+2. Если PWA держит старую версию: DevTools → Application → Service Workers → Unregister → Reload
+
+Раздел «Знаки» теперь рендерит 32 карточки, а не 298 одновременно.
