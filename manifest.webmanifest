@@ -1,13 +1,12 @@
 {
   "name": "ПДД+",
   "short_name": "ПДД+",
-  "description": "Тренажёр ПДД России, знаки и каталог автомобилей",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#070b16",
-  "theme_color": "#0b1020",
+  "background_color": "#0b0d11",
+  "theme_color": "#0b0d11",
   "icons": [
     {
       "src": "icons/icon-192.png",

@@ -1,51 +1,29 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="auto">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1020" />
-  <meta name="description" content="ПДД+ — тренажёр ПДД России A/B/M, справочник дорожных знаков и каталог автомобилей." />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="ПДД+" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="stylesheet" href="styles.css" />
-  <title>ПДД+</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0d11">
+<meta name="description" content="ПДД+ — тренажёр ПДД A/B/M, дорожные знаки и автомобильный справочник.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ПДД+">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<title>ПДД+</title>
 </head>
 <body>
-  <div class="ambient ambient-a"></div>
-  <div class="ambient ambient-b"></div>
-
-  <header class="topbar glass">
-    <a class="brand" href="#home" aria-label="ПДД+">
-      <span class="brand-mark">+</span>
-      <span>ПДД<span class="accent">+</span></span>
-    </a>
-    <nav class="desktop-nav" aria-label="Основная навигация">
-      <a href="#home">Главная</a>
-      <a href="#trainer">Тренажёр</a>
-      <a href="#signs">Знаки</a>
-      <a href="#cars">Авто</a>
-      <a href="#stats">Статистика</a>
-    </nav>
-    <button class="icon-btn" id="installBtn" title="Установить приложение" hidden>↓</button>
-  </header>
-
-  <main id="app" class="app-shell" aria-live="polite"></main>
-
-  <nav class="mobile-nav glass" aria-label="Мобильная навигация">
-    <a href="#home"><span>⌂</span><small>Главная</small></a>
-    <a href="#trainer"><span>✓</span><small>ПДД</small></a>
-    <a href="#signs"><span>◉</span><small>Знаки</small></a>
-    <a href="#cars"><span>◆</span><small>Авто</small></a>
-    <a href="#stats"><span>▥</span><small>Прогресс</small></a>
-  </nav>
-
-  <div id="toast" class="toast glass" role="status"></div>
-  <script src="data/questions.js"></script>
-  <script src="data/signs.js"></script>
-  <script src="data/cars.js"></script>
-  <script src="app.js"></script>
-</body>
-</html>
+<div class="noise"></div><div class="orb orb-a"></div><div class="orb orb-b"></div>
+<header class="dock glass">
+<a href="#home" class="brand"><span class="brand-glyph">П+</span><span class="brand-copy"><b>ПДД+</b><small>дорога без шума</small></span></a>
+<nav class="nav-main"><a href="#trainer">Тренажёр</a><a href="#signs">Знаки</a><a href="#cars">Авто</a><a href="#stats">Прогресс</a></nav>
+<div class="dock-actions"><button id="themeBtn" class="round" aria-label="Сменить тему">◐</button><button id="installBtn" class="round" hidden aria-label="Установить">↓</button></div>
+</header>
+<main id="app" class="wrap" aria-live="polite"></main>
+<nav class="bottom glass">
+<a href="#home"><span>⌂</span><small>Домой</small></a><a href="#trainer"><span>✓</span><small>ПДД</small></a><a href="#signs"><span>◇</span><small>Знаки</small></a><a href="#cars"><span>▰</span><small>Авто</small></a><a href="#stats"><span>▥</span><small>Прогресс</small></a>
+</nav>
+<div id="toast" class="toast glass"></div>
+<script src="data/questions.js"></script><script src="data/signs.js"></script><script src="data/cars.js"></script><script src="app.js"></script>
+</body></html>
