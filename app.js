@@ -8,7 +8,7 @@ if(hasCompatibleSync){
   if(Array.isArray(synced.cars)&&synced.cars.length)window.CAR_CATALOG=synced.cars;
 }
 const BANK_KEY=hasCompatibleSync?`sync:${synced.version}`:"pdf:pddmaster-12.1";
-const st={answers:store.get("answers:"+BANK_KEY,[]),mistakes:store.get("mistakes:"+BANK_KEY,[]),favorites:store.get("favorites:"+BANK_KEY,[]),exam:null,deferred:null};
+const st={answers:store.get("answers:"+BANK_KEY,[]),mistakes:store.get("mistakes:"+BANK_KEY,[]),favorites:store.get("favorites:"+BANK_KEY,[]),favoriteItems:store.get("favoriteItems:"+BANK_KEY,{}),exam:null,deferred:null};
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
 const MEDIA_API="https://commons.wikimedia.org/w/api.php";
@@ -223,7 +223,10 @@ function qMedia(q){
   return q.image?`<div class="question-media"><img src="${q.image}" alt="Иллюстрация к вопросу"></div>`:""
 }
 function qNavigator(e){
-  return `<div class="qnav">${e.qs.map((_,i)=>`<span class="qnum ${i===e.i?"current":""} ${i<e.i?"done":""}">${i+1}</span>`).join("")}</div>`
+  return `<div class="qnav">${e.qs.map((_,i)=>{
+    const state=e.history[i]===true?"q-correct":e.history[i]===false?"q-wrong":i<e.i?"done":"";
+    return `<span class="qnum ${i===e.i?"current":""} ${state}">${i+1}</span>`
+  }).join("")}</div>`
 }
 function buildSignTest(cat=""){
   const visual=ROAD_SIGNS.filter(s=>(!cat||s.cat===cat)&&s.image);
@@ -380,7 +383,7 @@ function trainer(){
 }
 function start(pool=PDD_QUESTIONS,label="Экзамен",limit=20,shuffle=true){
   let qs=[...pool];if(shuffle)qs.sort(()=>Math.random()-.5);qs=qs.slice(0,Math.min(limit,qs.length));
-  st.exam={qs,i:0,score:0,label,answered:false,history:[]};rq()
+  st.exam={qs,i:0,score:0,label,answered:false,history:[],choices:[],startedAt:Date.now(),autoFavAdded:0};rq()
 }
 function rq(){
   let e=st.exam;if(!e||e.i>=e.qs.length)return result();
@@ -404,12 +407,54 @@ function rq(){
     </aside>
   </div>`)
 }
+
+function signSourceExplanation(sign){
+  if(!sign)return "";
+  const desc=sign.sourceDescription||sign.meaning||`Знак ${sign.id} «${sign.name}».`;
+  const refs=Array.isArray(sign.pddRefs)?sign.pddRefs:[];
+  const pddRefs=refs.length
+    ? `<div class="sign-pdd-refs">
+        <div class="micro">Связанные положения ПДД</div>
+        ${refs.map(r=>`<article class="sign-pdd-ref">
+          <div>${esc(r.text)}</div>
+          <a href="docs/pravilaPDD.pdf#page=${r.page}" target="_blank" rel="noopener">ПДД · стр. ${r.page} ↗</a>
+        </article>`).join("")}
+      </div>`
+    : `<div class="source-footnote">В тексте предоставленного pravilaPDD.pdf отдельное упоминание этого номера знака не найдено; название и описание ниже взяты из справочника знаков.</div>`;
+
+  return `<div class="pdd-explanation sign-source-explanation">
+    <div class="pdd-explanation-head">
+      <div>
+        <span class="micro">Пояснение по дорожному знаку</span>
+        <h4>Знак ${esc(sign.id)} · ${esc(sign.name)}</h4>
+      </div>
+      <a class="btn pdd-source-btn" href="docs/znaki.pdf#page=${sign.sourcePage||1}" target="_blank" rel="noopener">znaki.pdf · стр. ${sign.sourcePage||"—"} ↗</a>
+    </div>
+    <div class="source-verified">
+      <span>Название сверено по справочнику знаков</span>
+      ${sign.pddRefs?.length?`<span>Номер знака также найден в ПДД</span>`:""}
+    </div>
+    <blockquote>${esc(desc)}</blockquote>
+    ${pddRefs}
+  </div>`;
+}
+
 function answer(i){
   let e=st.exam;if(e.answered)return;
   e.answered=true;
   let q=e.qs[e.i],ok=i===q.correct;
   if(ok)e.score++;
   e.history[e.i]=ok;
+  e.choices[e.i]=i;
+  if(!ok){
+    if(!st.favorites.includes(q.id)){
+      st.favorites.push(q.id);
+      e.autoFavAdded=(e.autoFavAdded||0)+1
+    }
+    st.favoriteItems[String(q.id)]={...q,_savedAt:Date.now(),_savedReason:"wrong"};
+    store.set("favorites:"+BANK_KEY,st.favorites);
+    store.set("favoriteItems:"+BANK_KEY,st.favoriteItems)
+  }
   st.answers.push({id:q.id,ok,ts:Date.now()});
   store.set("answers:"+BANK_KEY,st.answers);
   if(ok)st.mistakes=st.mistakes.filter(x=>x!==q.id);
@@ -423,8 +468,9 @@ function answer(i){
   });
 
   const correctText=q.answers[q.correct];
+
   const isMarking=q.type==="marking"&&q._markingId;
-  const marking= isMarking ? ROAD_MARKINGS.find(x=>x.id===q._markingId) : null;
+  const marking=isMarking?ROAD_MARKINGS.find(x=>x.id===q._markingId):null;
   const markingBlock=marking
     ? `<div class="pdd-explanation">
         <div class="pdd-explanation-head">
@@ -435,8 +481,13 @@ function answer(i){
         <div class="marking-answer-meta">Номер разметки: <b>${esc(marking.id)}</b></div>
       </div>`
     : "";
+
+  const signId=q._signId||q._answerSignId||"";
+  const sourceSign=signId?ROAD_SIGNS.find(x=>x.id===signId):null;
+  const signBlock=sourceSign?signSourceExplanation(sourceSign):"";
+
   const hasPDD=!!(q.explainPDD&&Number(q.explainPDDMatchScore)>=6);
-  const pddBlock=isMarking ? markingBlock : hasPDD
+  const genericPDD=hasPDD
     ? `<div class="pdd-explanation">
         <div class="pdd-explanation-head">
           <div><span class="micro">Пояснение по ПДД</span><h4>Почему этот ответ правильный</h4></div>
@@ -445,36 +496,46 @@ function answer(i){
         <blockquote>${esc(q.explainPDD)}</blockquote>
         ${ruleSignCards(q.explainPDD)}
       </div>`
-    : `<div class="pdd-explanation pdd-explanation-missing">
-        <div class="pdd-explanation-head"><div><span class="micro">Пояснение по ПДД</span><h4>В предоставленном PDF точный фрагмент не найден</h4></div></div>
-        <p>Правильный ответ подтверждён таблицей ответов билетов, но я не подставляю случайный пункт ПДД вместо подходящего объяснения.</p>
-      </div>`;
+    : "";
+
+  let explanation="";
+  if(marking){
+    explanation=markingBlock;
+  }else if(sourceSign){
+    // For a pure sign test the sign reference is the main explanation.
+    // For an official ticket with an exact sign-name answer, append the matched PDD fragment too.
+    explanation=signBlock+((q.sourceKind==="uploaded_pdf"&&genericPDD)?genericPDD:"");
+  }else if(genericPDD){
+    explanation=genericPDD;
+  }else{
+    explanation=`<div class="pdd-explanation pdd-explanation-missing">
+      <div class="pdd-explanation-head"><div><span class="micro">Пояснение</span><h4>Точный источник для пояснения не найден</h4></div></div>
+      <p>Правильный ответ подтверждён исходным билетом, но сайт не подставляет случайный пункт ПДД вместо подходящего объяснения.</p>
+    </div>`;
+  }
 
   $("#explain").innerHTML=`<div class="explain answer-result">
     <div class="answer-verdict ${ok?"is-correct":"is-wrong"}">
       <b>${ok?"Верно":"Неверно"}</b>
-      ${ok?"":`<span>Правильный ответ: <strong>${esc(correctText)}</strong></span>`}
+      ${ok?"":`<span>Правильный ответ: <strong>${esc(correctText)}</strong></span><span class="auto-fav-note">★ Вопрос добавлен в избранное</span>`}
     </div>
-    ${pddBlock}
+    ${explanation}
     <div class="actions"><button class="btn btn-primary" onclick="PDD.next()">Следующий →</button></div>
   </div>`
 }
 function mistakes(){let qs=PDD_QUESTIONS.filter(q=>st.mistakes.includes(q.id));app.innerHTML=shell("Ошибки","После правильного ответа вопрос исчезает из этого списка.",qs.length?`<div class="card glass section"><div class="big-num">${qs.length}</div><p class="muted">к повторению</p><button class="btn btn-primary" onclick="PDD.start(PDD.err(),'Ошибки',20)">Повторить</button></div>`:`<div class="card glass section"><h3>Чисто.</h3><p class="muted">Ошибок пока нет.</p></div>`)}
 function stats(){let z=p();app.innerHTML=shell("Прогресс","Хранится локально на устройстве.",`<div class="grid g3 section"><div class="card glass"><div class="big-num">${z.pct}%</div><div class="micro">точность</div></div><div class="card glass"><div class="big-num">${st.answers.length}</div><div class="micro">ответов</div></div><div class="card glass"><div class="big-num">${st.mistakes.length}</div><div class="micro">ошибок</div></div></div><div class="actions"><a class="btn" href="#favorites">Избранное</a><a class="btn" href="#bank">Банк вопросов</a><a class="btn" href="#updates">Обновления</a><a class="btn" href="#data">Статус данных</a><button class="btn" onclick="PDD.reset()">Сбросить</button></div>`)}
-function favorites(){let qs=PDD_QUESTIONS.filter(q=>st.favorites.includes(q.id));app.innerHTML=shell("Избранное","Отмеченные вопросы.",qs.length?`<div class="list">${qs.slice(0,100).map(q=>`<div class="row"><span><strong>${esc(q.q)}</strong><small>${esc(q.topic)}</small></span><button class="round" onclick='PDD.fav(${JSON.stringify(q.id)})'>★</button></div>`).join("")}</div>`:`<div class="card glass">Пока пусто.</div>`)}
-function signs(){
-  let cs=[...new Set(ROAD_SIGNS.map(s=>s.cat))];
-  app.innerHTML=shell("Дорожные знаки",`${ROAD_SIGNS.length} изображений и описаний из предоставленного znaki.pdf.`,`
-    <div class="toolbar signs-toolbar">
-      <input class="input" id="sq" placeholder="Номер, название или описание" oninput="PDD.fs()">
-      <select class="select" id="sc" onchange="PDD.fs()"><option value="">Все категории</option>${cs.map(c=>`<option>${esc(c)}</option>`).join("")}</select>
-      <button class="btn btn-primary" onclick="PDD.signCat()">Тест по категории</button>
-      <a class="btn" href="docs/znaki.pdf" target="_blank">Открыть PDF ↗</a>
-    </div>
-    <div class="sign-test-strip">${cs.map(c=>`<button class="chip" onclick='PDD.signCat(${JSON.stringify(c)})'>${esc(c)}</button>`).join("")}</div>
-    <div id="sg" class="sign-grid section"></div>
-    <div class="notice section">Изображения в карточках вырезаны непосредственно из предоставленного znaki.pdf. Для каждой карточки указан номер страницы источника.</div>`);
-  fs()
+function favoriteQuestions(){
+  const bank=new Map(PDD_QUESTIONS.map(q=>[String(q.id),q]));
+  Object.entries(st.favoriteItems||{}).forEach(([id,q])=>{if(q&&!bank.has(id))bank.set(id,q)});
+  return st.favorites.map(id=>bank.get(String(id))).filter(Boolean)
+}
+function favorites(){
+  const qs=favoriteQuestions();
+  app.innerHTML=shell("Избранное","Сюда автоматически попадают все вопросы, на которые вы ответили неправильно.",qs.length?`
+    <div class="card glass section favorite-summary"><div><div class="big-num">${qs.length}</div><div class="micro">вопросов сохранено</div></div><button class="btn btn-primary" onclick="PDD.start(PDD.favQs(),'Избранное',Math.min(100,PDD.favQs().length),false)">Повторить избранное</button></div>
+    <div class="list">${qs.slice(0,150).map(q=>`<div class="row"><span><strong>${esc(q.q)}</strong><small>${esc(q.topic||"Тренировка")}${q._savedReason==="wrong"?" · добавлено после ошибки":""}</small></span><button class="round" onclick='PDD.fav(${JSON.stringify(q.id)})'>★</button></div>`).join("")}</div>`
+    :`<div class="card glass">Пока пусто. Ошибочные ответы будут добавляться сюда автоматически.</div>`)
 }
 function fs(){
   let q=($("#sq")?.value||"").toLowerCase(),c=$("#sc")?.value||"";
@@ -585,6 +646,89 @@ function car(i,gi=0){
     <div class="card glass section"><h3>Обзоры в интернете</h3><div class="actions"><a class="btn" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q}">YouTube ↗</a><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${d}">Drom ↗</a><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${r}">Drive2 ↗</a></div></div>
     <div class="actions"><a class="btn" href="#cars">← Каталог</a></div>`)
 }
+
+function formatDuration(ms){
+  const sec=Math.max(0,Math.round(ms/1000)),m=Math.floor(sec/60),s=sec%60;
+  return m?`${m} мин ${String(s).padStart(2,"0")} сек`:`${s} сек`
+}
+function result(){
+  const e=st.exam;if(!e)return;
+  const total=e.qs.length;
+  const correct=e.history.filter(x=>x===true).length;
+  const wrong=e.history.filter(x=>x===false).length;
+  const unanswered=Math.max(0,total-correct-wrong);
+  const pct=total?Math.round(correct/total*100):0;
+  const duration=Date.now()-(e.startedAt||Date.now());
+  const avg=total?Math.round(duration/total/1000):0;
+  const wrongRows=e.qs.map((q,i)=>({q,i,ok:e.history[i],choice:e.choices?.[i]})).filter(x=>x.ok===false);
+
+  const topics=new Map();
+  e.qs.forEach((q,i)=>{
+    const k=q.topic||q.cat||"Другое",x=topics.get(k)||{n:0,c:0,w:0};
+    x.n++;if(e.history[i]===true)x.c++;else if(e.history[i]===false)x.w++;topics.set(k,x)
+  });
+  const topicRows=[...topics.entries()].sort((a,b)=>b[1].w-a[1].w||b[1].n-a[1].n).slice(0,8);
+
+  const grade=pct>=90?"Отличный результат":pct>=80?"Хороший результат":pct>=70?"Неплохо":"Стоит повторить ошибки";
+  const ringStyle=`--score:${pct}%`;
+
+  app.innerHTML=shell("Результат теста",esc(e.label),`
+    <section class="result-hero glass section">
+      <div class="result-ring" style="${ringStyle}"><div><b>${pct}%</b><span>выполнено</span></div></div>
+      <div class="result-copy">
+        <span class="tag">${esc(e.label)}</span>
+        <h2>${grade}</h2>
+        <p class="muted">Отвечено ${correct+wrong} из ${total}. ${wrong?`Ошибочные вопросы уже добавлены в избранное.`:"Ошибок нет."}</p>
+      </div>
+    </section>
+
+    <div class="result-stats grid g4 section">
+      <article class="card glass stat-good"><div class="big-num">${correct}</div><div class="micro">правильных</div></article>
+      <article class="card glass stat-bad"><div class="big-num">${wrong}</div><div class="micro">неправильных</div></article>
+      <article class="card glass"><div class="big-num">${pct}%</div><div class="micro">точность</div></article>
+      <article class="card glass"><div class="big-num">${formatDuration(duration)}</div><div class="micro">время · ~${avg} сек/вопрос</div></article>
+    </div>
+
+    ${topicRows.length>1?`<section class="card glass section result-topics">
+      <div class="section-head"><div><h3>По темам</h3><p>Где были правильные и неправильные ответы.</p></div></div>
+      <div class="topic-stat-list">${topicRows.map(([name,x])=>{
+        const tp=x.n?Math.round(x.c/x.n*100):0;
+        return `<div class="topic-stat-row"><div><b>${esc(name)}</b><small>${x.c} верно · ${x.w} ошибок · ${x.n} всего</small></div><div class="topic-stat-meter"><i style="width:${tp}%"></i></div><strong>${tp}%</strong></div>`
+      }).join("")}</div>
+    </section>`:""}
+
+    ${wrongRows.length?`<section class="card glass section result-errors">
+      <div class="section-head"><div><h3>Ошибки (${wrongRows.length})</h3><p>Все эти вопросы автоматически сохранены в избранное.</p></div></div>
+      <div class="result-error-list">${wrongRows.map(({q,i,choice})=>{
+        const chosen=Number.isInteger(choice)?q.answers[choice]:"—";
+        const correctText=q.answers[q.correct];
+        return `<article class="result-error-row">
+          <span class="result-error-num">${i+1}</span>
+          <div><b>${esc(q.q)}</b><small>Ваш ответ: ${esc(chosen)}</small><small>Правильно: ${esc(correctText)}</small></div>
+          <span class="result-error-star">★</span>
+        </article>`
+      }).join("")}</div>
+    </section>`:`<section class="card glass section result-perfect"><h3>Без ошибок</h3><p class="muted">Все ${total} вопросов отвечены правильно.</p></section>`}
+
+    <div class="actions result-actions">
+      ${wrongRows.length?`<button class="btn btn-primary" onclick="PDD.reviewLastErrors()">Повторить ошибки</button>`:""}
+      <button class="btn" onclick="PDD.retryTest()">Пройти ещё раз</button>
+      <a class="btn" href="#favorites">Избранное${wrongRows.length?` · ${wrongRows.length}`:""}</a>
+      <a class="btn" href="#trainer">К тренажёрам</a>
+    </div>
+  `)
+}
+function reviewLastErrors(){
+  const e=st.exam;if(!e)return;
+  const qs=e.qs.filter((_,i)=>e.history[i]===false);
+  if(!qs.length){msg("Ошибок нет");return}
+  start(qs,"Повтор ошибок",qs.length,false)
+}
+function retryTest(){
+  const e=st.exam;if(!e)return;
+  start(e.qs,e.label,e.qs.length,false)
+}
+
 function next(){
   let e=st.exam;
   if(!e)return;
@@ -593,7 +737,21 @@ function next(){
   if(e.i>=e.qs.length)result();
   else rq()
 }
-function fav(id){st.favorites=st.favorites.includes(id)?st.favorites.filter(x=>x!==id):[...st.favorites,id];store.set("favorites:"+BANK_KEY,st.favorites);msg("Избранное обновлено");st.exam?rq():favorites()}
+function fav(id){
+  const had=st.favorites.includes(id);
+  if(had){
+    st.favorites=st.favorites.filter(x=>x!==id);
+    delete st.favoriteItems[String(id)]
+  }else{
+    st.favorites=[...st.favorites,id];
+    const current=st.exam?.qs?.find(q=>q.id===id)||PDD_QUESTIONS.find(q=>q.id===id);
+    if(current)st.favoriteItems[String(id)]={...current,_savedAt:Date.now(),_savedReason:"manual"}
+  }
+  store.set("favorites:"+BANK_KEY,st.favorites);
+  store.set("favoriteItems:"+BANK_KEY,st.favoriteItems);
+  msg(had?"Удалено из избранного":"Добавлено в избранное");
+  if(st.exam&&!st.exam.answered)rq();else if(!st.exam)favorites()
+}
 function reset(){if(confirm("Сбросить статистику и ошибки?")){st.answers=[];st.mistakes=[];store.set("answers:"+BANK_KEY,[]);store.set("mistakes:"+BANK_KEY,[]);stats()}}
 
 
@@ -728,7 +886,7 @@ function dataStatus(){
 }
 
 function route(){let h=location.hash.slice(1)||"home";if(h==="home")home();else if(h==="trainer")trainer();else if(h==="tickets")tickets();else if(h==="mistakes")mistakes();else if(h==="favorites")favorites();else if(h==="stats")stats();else if(h==="signs")signs();else if(h==="markings")markings();else if(h==="rules")rules();else if(h==="cars")cars();else if(h==="bank")bank();else if(h==="updates")updates();else if(h==="data")dataStatus();else if(h.startsWith("car-")){let x=h.split("-");car(+x[1],+(x[2]||0))}else home();window.scrollTo({top:0,behavior:"smooth"})}
-window.PDD={mediaError,
+window.PDD={reviewLastErrors,retryTest,favQs:favoriteQuestions,mediaError,
   start:(a,b,c,d)=>start(a||PDD_QUESTIONS,b||"Экзамен",c||20,d!==undefined?d:true),
   signTest:()=>start(PDD_QUESTIONS.filter(q=>q.type==="sign_name").length?PDD_QUESTIONS.filter(q=>q.type==="sign_name"):buildSignTest(),"Тест по знакам",20,true),
   signNumbers,daily,marathon,hard,signCat:signCategory,signOne,markingTest:()=>start(buildMarkingTest(),"Тест по разметке",20,true),

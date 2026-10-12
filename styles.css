@@ -784,3 +784,127 @@ html[data-theme="light"] .question-media.real-loaded{background:#eee}
   font-size:12px;
 }
 .marking-answer-meta b{color:var(--text)}
+
+
+/* ---- v9.9: sign explanations cross-checked against znaki.pdf + PDD ---- */
+.sign-source-explanation .source-verified{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:-2px 0 12px;
+}
+.sign-source-explanation .source-verified span{
+  display:inline-flex;
+  align-items:center;
+  min-height:27px;
+  padding:5px 9px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--muted);
+  font-size:10px;
+}
+.sign-pdd-refs{
+  display:grid;
+  gap:8px;
+  margin-top:14px;
+}
+.sign-pdd-ref{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:start;
+  padding:12px 13px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:var(--panel);
+  font-size:12px;
+  line-height:1.5;
+  color:var(--text);
+}
+.sign-pdd-ref a{
+  white-space:nowrap;
+  color:var(--accent);
+  text-decoration:none;
+  font-size:10px;
+  font-weight:700;
+}
+.source-footnote{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+}
+@media(max-width:620px){
+  .sign-pdd-ref{grid-template-columns:1fr}
+}
+
+
+/* ---- v10: test result dashboard ---- */
+.result-hero{
+  display:grid;
+  grid-template-columns:170px minmax(0,1fr);
+  gap:24px;
+  align-items:center;
+  padding:24px;
+}
+.result-ring{
+  --score:0;
+  width:150px;height:150px;border-radius:50%;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--accent) var(--score),rgba(255,255,255,.08) 0);
+  position:relative;
+}
+.result-ring:after{
+  content:"";position:absolute;inset:12px;border-radius:50%;
+  background:var(--panel);
+  border:1px solid var(--line);
+}
+.result-ring>div{position:relative;z-index:2;text-align:center}
+.result-ring b{display:block;font-size:31px;line-height:1}
+.result-ring span{display:block;margin-top:7px;color:var(--muted);font-size:10px}
+.result-copy h2{margin:10px 0 8px;font-size:clamp(26px,4vw,46px)}
+.result-stats .big-num{font-size:30px}
+.result-stats .stat-good{border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+.result-stats .stat-bad{border-color:color-mix(in srgb,var(--bad) 35%,var(--line))}
+.topic-stat-list{display:grid;gap:12px}
+.topic-stat-row{
+  display:grid;
+  grid-template-columns:minmax(190px,1.4fr) minmax(150px,1fr) 52px;
+  gap:14px;align-items:center
+}
+.topic-stat-row b{display:block;font-size:13px}
+.topic-stat-row small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.topic-stat-meter{height:8px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.topic-stat-meter i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#8aa1ff,#aa78ff)}
+.topic-stat-row>strong{text-align:right;font-size:12px}
+.result-error-list{display:grid;gap:9px}
+.result-error-row{
+  display:grid;grid-template-columns:38px minmax(0,1fr) 28px;gap:12px;align-items:start;
+  padding:13px;border:1px solid var(--line);border-radius:15px;background:var(--panel)
+}
+.result-error-num{
+  width:32px;height:32px;border-radius:10px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--bad) 15%,var(--panel));font-size:11px;font-weight:800
+}
+.result-error-row b{display:block;font-size:12px;line-height:1.4;margin-bottom:5px}
+.result-error-row small{display:block;color:var(--muted);font-size:10px;line-height:1.4;margin-top:2px}
+.result-error-star{color:#ffd56a;text-align:center;font-size:17px}
+.result-perfect{text-align:center;padding:28px}
+.auto-fav-note{
+  display:inline-flex!important;align-items:center;min-height:28px;padding:5px 9px;border-radius:999px;
+  border:1px solid color-mix(in srgb,#ffd56a 45%,var(--line));color:#ffd56a!important;
+  font-size:10px!important;font-weight:700
+}
+.favorite-summary{
+  display:flex;align-items:center;justify-content:space-between;gap:16px
+}
+.qnum.q-correct{border-color:color-mix(in srgb,var(--ok) 60%,var(--line));background:color-mix(in srgb,var(--ok) 14%,var(--panel))}
+.qnum.q-wrong{border-color:color-mix(in srgb,var(--bad) 60%,var(--line));background:color-mix(in srgb,var(--bad) 14%,var(--panel))}
+@media(max-width:760px){
+  .result-hero{grid-template-columns:1fr;text-align:center}
+  .result-ring{margin:0 auto}
+  .topic-stat-row{grid-template-columns:1fr 52px}
+  .topic-stat-meter{grid-column:1/-1;grid-row:2}
+  .favorite-summary{align-items:stretch;flex-direction:column}
+}
