@@ -1,0 +1,15 @@
+{
+  "project": "ПДД+",
+  "build": "v8-pdf",
+  "build_date": "2026-10-12",
+  "bank_questions": 800,
+  "tickets": 40,
+  "questions_per_ticket": 20,
+  "ticket_images": 548,
+  "source_kind": "uploaded_pdf",
+  "source_name": "bileti-pdd-abm-pddmaster.ru-12.1.pdf",
+  "source_answer_table_page": 404,
+  "source_ticket_pages": "4-403",
+  "source_note": "Вопросы, варианты ответов, изображения и правильные ответы извлечены из предоставленного пользователем PDF. Сам PDF предупреждает, что билеты могут изменяться и рекомендует проверять свежую версию.",
+  "online_update_supported": true
+}

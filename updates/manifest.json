@@ -1,0 +1,8 @@
+{
+  "version": "local-v6",
+  "updatedAt": "2026-10-12",
+  "notes": "Локальная сборка. Для реальных онлайн-обновлений укажите URL манифеста в настройках.",
+  "questions": null,
+  "signs": null,
+  "cars": null
+}

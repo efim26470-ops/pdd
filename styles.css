@@ -146,3 +146,252 @@ html[data-theme="light"] .sign-media{background:#fff!important}
   .qnum{font-size:10px;border-radius:8px}
   .sign-card .sign-media{height:122px}
 }
+
+
+/* ---- v6 learning hub / updater ---- */
+.ticket-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.ticket-card{
+  min-height:126px;border:1px solid var(--line);border-radius:22px;padding:16px;
+  color:var(--text);background:linear-gradient(145deg,var(--panel2),var(--panel));
+  text-align:left;cursor:pointer;box-shadow:var(--shadow);transition:.18s transform,.18s border-color
+}
+.ticket-card:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 35%,var(--line))}
+.ticket-no{display:block;font-size:30px;font-weight:850;letter-spacing:-.05em;margin-bottom:8px}
+.ticket-card .progress{margin:13px 0 0}
+.sign-test-strip{display:flex;gap:8px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.sign-test-strip::-webkit-scrollbar{display:none}
+.chip{
+  white-space:nowrap;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+  border-radius:999px;padding:9px 12px;cursor:pointer;font:inherit;font-size:12px
+}
+.chip:hover{color:var(--text);background:var(--panel2)}
+.sign-test-btn{margin-top:14px;width:100%;min-height:40px;font-size:12px}
+.update-card{padding:26px}
+.update-card h3{font-size:28px;margin:8px 0}
+.update-status{min-height:24px;margin-top:8px;color:var(--muted);font-size:13px}
+.syncing{color:var(--accent)}.update-error{color:var(--bad)}
+.question-row{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--text)}
+.topic-list{max-height:680px;overflow:auto;padding-right:3px}
+.mode-card{min-height:210px}
+.mode-card .feature-icon{margin-bottom:22px}
+.mode-card h3{font-size:21px}
+@media(max-width:900px){
+  .ticket-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  .ticket-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .ticket-card{min-height:108px;padding:14px;border-radius:18px}
+  .ticket-no{font-size:26px}
+  .mode-card{min-height:0}
+  .update-card{padding:18px}
+}
+
+
+/* ---- v7 real media layer ---- */
+.sign-media,.car-art,.question-media{position:relative}
+.media-status{
+  position:absolute;right:10px;bottom:9px;z-index:8;
+  padding:5px 8px;border-radius:999px;
+  background:rgba(17,24,39,.72);color:#fff;
+  font-size:9px;letter-spacing:.02em;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+}
+.real-loaded>.media-status{display:none}
+.media-credit{
+  position:absolute;left:10px;bottom:9px;z-index:9;
+  max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:5px 8px;border-radius:999px;
+  background:rgba(17,24,39,.72);color:#fff!important;text-decoration:none;
+  font-size:9px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+}
+
+/* Real road-sign image wins over local fallback. */
+.sign-media .real-media{
+  position:absolute;inset:0;z-index:5;width:100%;height:100%;
+  object-fit:contain;padding:13px;opacity:0;transition:opacity .22s ease
+}
+.sign-media.real-loaded .real-media{opacity:1}
+.sign-media.real-loaded .fallback-media,
+.sign-media.real-loaded .sign-fallback{opacity:0!important}
+.sign-media .fallback-media{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:contain;
+  padding:13px;z-index:2;opacity:1
+}
+.sign-media:has(.fallback-media) .sign-fallback{opacity:0}
+.question-sign .real-media,.question-sign .fallback-media{padding:22px!important}
+
+/* Car photo replaces the vector silhouette only after a verified file result is loaded. */
+.car-art .real-car-img{
+  position:absolute;inset:0;z-index:5;width:100%;height:100%;
+  object-fit:cover;opacity:0;transition:opacity .25s ease
+}
+.car-art.real-loaded .real-car-img{opacity:1}
+.car-art.real-loaded svg,
+.car-art.real-loaded .car-art-head,
+.car-art.real-loaded .car-art-foot{opacity:0}
+.car-art svg,.car-art-head,.car-art-foot{transition:opacity .18s ease}
+.car-art.real-loaded:after{display:none}
+.car-art.real-loaded .media-credit{display:block}
+.car-media-status{z-index:7}
+
+/* Ticket image: local scheme is only a fallback, real Commons photo overlays it online. */
+.question-media{
+  min-height:260px;background:#e8edf2;
+}
+.question-media .fallback-scene,
+.question-media .real-scene-img{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover
+}
+.question-media .fallback-scene{z-index:1;opacity:1;transition:opacity .2s ease}
+.question-media .real-scene-img{z-index:3;opacity:0;transition:opacity .25s ease}
+.question-media.real-loaded .real-scene-img{opacity:1}
+.question-media.real-loaded .fallback-scene{opacity:0}
+.question-media .media-status{z-index:6}
+.question-media .media-credit{z-index:7}
+.question-media-scene img{height:100%}
+
+/* Do not make remote photographs look like generated glass illustrations. */
+.car-art.real-loaded,
+.question-media.real-loaded{background:#111}
+html[data-theme="light"] .question-media.real-loaded{background:#eee}
+
+@media(max-width:620px){
+  .media-credit{max-width:62%;font-size:8px}
+  .media-status{font-size:8px}
+  .question-media{min-height:220px}
+}
+
+.photo-illustration-note{
+  position:absolute;top:10px;left:10px;z-index:8;
+  padding:6px 9px;border-radius:999px;
+  background:rgba(17,24,39,.72);color:#fff;
+  font-size:9px;font-weight:700;letter-spacing:.02em;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+}
+
+
+/* ---- v8: exact media extracted from the supplied ticket PDF ---- */
+.official-ticket-media{
+  display:block;
+  position:relative;
+  width:100%;
+  min-height:0!important;
+  aspect-ratio:auto!important;
+  margin:8px 0 22px;
+  padding:0;
+  overflow:hidden;
+  border-radius:22px;
+  background:#fff!important;
+  border:1px solid rgba(15,23,42,.10);
+  box-shadow:0 12px 34px rgba(0,0,0,.12)
+}
+.official-ticket-media img{
+  position:static!important;
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  max-height:390px;
+  aspect-ratio:8/3;
+  object-fit:contain!important;
+  padding:0!important;
+  margin:0;
+  opacity:1!important;
+  background:#fff;
+  filter:none!important
+}
+.official-ticket-media figcaption{
+  position:absolute;
+  left:10px;
+  bottom:10px;
+  z-index:5;
+  padding:6px 9px;
+  border-radius:999px;
+  color:#fff;
+  background:rgba(17,24,39,.72);
+  font-size:9px;
+  line-height:1;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px)
+}
+.question:has(.official-ticket-media) h2{margin-top:18px}
+.source-pdf-badge{font-variant-numeric:tabular-nums}
+@media(max-width:620px){
+  .official-ticket-media{border-radius:17px;margin-bottom:17px}
+  .official-ticket-media img{max-height:260px}
+  .official-ticket-media figcaption{font-size:8px;left:8px;bottom:8px}
+}
+
+
+/* ---- v9 source document layer ---- */
+.source-sign-media{
+  position:relative!important;
+  height:165px!important;
+  margin:0 0 14px!important;
+  padding:10px!important;
+  display:grid!important;
+  place-items:center!important;
+  background:#fff!important;
+  border:1px solid rgba(15,23,42,.08)!important;
+  border-radius:20px!important;
+  overflow:hidden!important
+}
+.source-sign-media .source-sign-img{
+  position:static!important;
+  inset:auto!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  padding:0!important;
+  margin:0!important;
+  opacity:1!important;
+  filter:none!important
+}
+.source-sign-media figcaption,
+.marking-media figcaption{
+  position:absolute;right:8px;bottom:8px;
+  padding:4px 7px;border-radius:999px;
+  background:rgba(17,24,39,.72);color:#fff;
+  font-size:9px;line-height:1
+}
+.source-meaning{
+  display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;
+  overflow:hidden
+}
+.source-row{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.source-row .sign-test-btn{width:auto;margin:0}
+.marking-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.marking-card{padding:14px;display:grid;grid-template-columns:150px 1fr;gap:15px;align-items:start}
+.marking-media{
+  position:relative;margin:0;height:150px;border-radius:18px;
+  background:#fff;border:1px solid rgba(15,23,42,.08);
+  display:grid;place-items:center;overflow:hidden
+}
+.marking-media img{width:100%;height:100%;object-fit:contain;padding:8px;filter:none!important}
+.marking-copy h3{font-size:20px;margin:10px 0 7px}
+.source-reference-media{
+  display:block;position:relative;margin:6px 0 20px;padding:0;
+  min-height:0!important;background:#fff!important;border-radius:22px;overflow:hidden
+}
+.source-reference-media img{display:block;width:100%;height:260px;object-fit:contain;padding:10px;background:#fff}
+.source-reference-media figcaption{
+  position:absolute;left:10px;bottom:10px;padding:5px 8px;border-radius:999px;
+  background:rgba(17,24,39,.72);color:#fff;font-size:9px
+}
+.rules-page{padding:26px}.rules-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+.rules-text{font-size:16px;line-height:1.72;color:var(--text)}
+.rules-text p{margin:0 0 18px}.rule-result{width:100%;font:inherit;text-align:left;cursor:pointer;color:var(--text)}
+.rule-result small{max-width:900px;line-height:1.45}
+@media(max-width:760px){
+  .marking-grid{grid-template-columns:1fr}
+  .marking-card{grid-template-columns:115px 1fr}
+  .marking-media{height:120px}
+}
+@media(max-width:520px){
+  .source-sign-media{height:135px!important}
+  .marking-card{grid-template-columns:1fr}
+  .marking-media{height:160px}
+  .rules-page{padding:18px}
+  .rules-text{font-size:15px}
+}
