@@ -1,0 +1,7 @@
+Заменить на GitHub:
+- signs-02/5.24.2.png
+- data/signs.js
+- data/meta.js
+- sw.js
+
+После публикации: Ctrl+Shift+R. Для установленной PWA при необходимости Unregister service worker.
