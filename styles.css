@@ -437,3 +437,284 @@ html[data-theme="light"] .question-media.real-loaded{background:#eee}
   .marking-grid{grid-template-columns:1fr!important}
   .marking-card{grid-template-columns:105px minmax(0,1fr)!important}
 }
+
+
+/* ---- v9.4: compact PDD sign refs + exact marking crops ---- */
+.rules-page,
+.rules-text,
+.rule-paragraph{
+  min-width:0;
+  max-width:100%;
+}
+.rules-page{
+  overflow:hidden;
+}
+.rule-paragraph>p{
+  width:100%;
+  max-width:100%;
+  overflow-wrap:break-word;
+  word-break:normal;
+  line-height:1.65;
+}
+
+.rule-sign-strip{
+  width:100%;
+  max-width:100%;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(178px,220px));
+  gap:9px;
+  overflow:visible;
+  margin-top:13px;
+  padding:0;
+}
+.rule-sign-ref{
+  width:100%;
+  min-width:0;
+  max-width:220px;
+  min-height:92px;
+  display:grid;
+  grid-template-columns:68px minmax(0,1fr);
+  gap:10px;
+  align-items:center;
+  padding:9px;
+  border-radius:16px;
+}
+.rule-sign-img{
+  width:68px;
+  height:68px;
+  border-radius:11px;
+}
+.rule-sign-img img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  padding:4px;
+}
+.rule-sign-copy{
+  min-width:0;
+  overflow:hidden;
+}
+.rule-sign-copy b{
+  font-size:13px;
+  line-height:1.15;
+}
+.rule-sign-copy span{
+  font-size:11px;
+  line-height:1.3;
+  overflow-wrap:anywhere;
+}
+
+.marking-grid{
+  grid-template-columns:repeat(auto-fill,minmax(310px,1fr))!important;
+  gap:12px!important;
+}
+.marking-card{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:12px!important;
+  min-width:0!important;
+  padding:14px!important;
+}
+.marking-media{
+  width:100%!important;
+  height:150px!important;
+  border-radius:18px!important;
+  background:#fff!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:hidden!important;
+}
+.marking-media img{
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  padding:8px!important;
+  background:#fff!important;
+}
+.marking-copy{
+  min-width:0!important;
+}
+.marking-copy h3{
+  margin:8px 0 6px!important;
+}
+.marking-copy .source-meaning{
+  -webkit-line-clamp:4!important;
+  min-height:0!important;
+}
+
+.source-reference-media img{
+  object-fit:contain!important;
+  background:#fff!important;
+  padding:12px!important;
+}
+
+@media(max-width:760px){
+  .rule-sign-strip{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .rule-sign-ref{
+    max-width:none;
+    grid-template-columns:58px minmax(0,1fr);
+    min-height:78px;
+  }
+  .rule-sign-img{
+    width:58px;
+    height:58px;
+  }
+  .marking-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+@media(max-width:430px){
+  .rule-sign-strip{
+    grid-template-columns:1fr;
+  }
+  .rule-sign-ref{
+    max-width:none;
+  }
+}
+
+
+/* ---- v9.5: exact sign crops / no zoom / no blank strips ---- */
+.source-sign-media,
+.question-sign.source-sign-media,
+.actual-sign.source-sign-media{
+  background:#fff!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:hidden!important;
+}
+.question-sign.source-sign-media{
+  height:320px!important;
+  padding:14px!important;
+  border-radius:24px!important;
+}
+.question-sign.source-sign-media .source-sign-img,
+.source-sign-media .source-sign-img{
+  position:static!important;
+  inset:auto!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  padding:0!important;
+  margin:0!important;
+  opacity:1!important;
+  filter:none!important;
+}
+.question-sign.source-sign-media figcaption{
+  left:auto!important;
+  right:10px!important;
+  bottom:10px!important;
+  max-width:calc(100% - 20px);
+}
+@media(max-width:620px){
+  .question-sign.source-sign-media{
+    height:245px!important;
+    padding:10px!important;
+    border-radius:18px!important;
+  }
+}
+
+
+/* ---- v9.6: explanations grounded in pravilaPDD.pdf ---- */
+.answer-result{
+  margin-top:18px;
+  display:grid;
+  gap:14px;
+}
+.answer-verdict{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  flex-wrap:wrap;
+  padding:16px 18px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:var(--panel);
+}
+.answer-verdict b{
+  font-size:18px;
+  line-height:1.2;
+}
+.answer-verdict span{
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.45;
+}
+.answer-verdict.is-correct{
+  border-color:color-mix(in srgb,var(--ok) 55%,var(--line));
+  background:color-mix(in srgb,var(--ok) 10%,var(--panel));
+}
+.answer-verdict.is-wrong{
+  border-color:color-mix(in srgb,var(--bad) 48%,var(--line));
+  background:color-mix(in srgb,var(--bad) 8%,var(--panel));
+}
+
+.pdd-explanation{
+  padding:18px;
+  border-radius:20px;
+  border:1px solid var(--line);
+  background:linear-gradient(145deg,var(--panel2),var(--panel));
+}
+.pdd-explanation-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:12px;
+}
+.pdd-explanation-head h4{
+  margin:4px 0 0;
+  font-size:17px;
+}
+.pdd-source-btn{
+  flex:0 0 auto;
+  min-height:38px;
+  padding:9px 12px;
+  font-size:11px;
+}
+.pdd-explanation blockquote{
+  margin:0;
+  padding:14px 16px;
+  border-left:3px solid var(--accent);
+  border-radius:0 14px 14px 0;
+  background:color-mix(in srgb,var(--accent) 7%,var(--panel));
+  color:var(--text);
+  font-size:14px;
+  line-height:1.62;
+}
+.pdd-explanation .rule-sign-strip{
+  margin-top:14px;
+}
+.pdd-explanation-missing{
+  border-style:dashed;
+}
+.pdd-explanation-missing p{
+  margin:0;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}
+
+@media(max-width:620px){
+  .answer-verdict{
+    padding:14px;
+  }
+  .pdd-explanation{
+    padding:14px;
+  }
+  .pdd-explanation-head{
+    flex-direction:column;
+  }
+  .pdd-source-btn{
+    width:100%;
+    justify-content:center;
+  }
+  .pdd-explanation blockquote{
+    font-size:13px;
+    padding:12px 13px;
+  }
+}
