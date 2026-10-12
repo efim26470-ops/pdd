@@ -5,15 +5,50 @@ const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 function signKind(cat=""){if(cat.includes("Предупреж"))return"warning";if(cat.includes("Запрещ"))return"ban";if(cat.includes("Приоритет"))return"priority";if(cat.includes("Предпис"))return"mandatory";if(cat.includes("Сервис"))return"service";return"info"}
 function signVisual(s,extra=""){
   if(!s)return"";
+  const arr=(s.imageCandidates&&s.imageCandidates.length?s.imageCandidates:[s.image]).filter(Boolean);
+  const src=arr[0]||"";
+  const packed=encodeURIComponent(JSON.stringify(arr));
   return `<div class="sign-media ${extra} kind-${signKind(s.cat)}">
     <div class="sign-fallback"><span>${esc(s.id)}</span></div>
-    ${s.image?`<img src="${s.image}" alt="${esc(s.name)}" loading="lazy" onload="this.parentElement.classList.add('loaded')" onerror="this.remove()">`:""}
+    ${src?`<img src="${src}" data-sources="${packed}" data-source-index="0" alt="${esc(s.name)}" loading="lazy" onload="this.parentElement.classList.add('loaded')" onerror="PDD.imgNext(this)">`:""}
   </div>`
 }
 function signFromQuestion(q){
   const m=String(q.q||"").match(/(?:знак(?:и)?\s*)(\d+(?:\.\d+){1,2})/i);
   return m?ROAD_SIGNS.find(s=>s.id===m[1])||null:null
 }
+
+function imgNext(img){
+  let arr=[];try{arr=JSON.parse(decodeURIComponent(img.dataset.sources||"%5B%5D"))}catch{}
+  let i=(Number(img.dataset.sourceIndex)||0)+1;
+  if(i<arr.length){img.dataset.sourceIndex=String(i);img.src=arr[i];return}
+  img.remove()
+}
+function qMedia(q){
+  if(q._signId){
+    const s=ROAD_SIGNS.find(x=>x.id===q._signId);return s?signVisual(s,"question-sign actual-sign"):""
+  }
+  if(q.image){
+    const isSign=q.imageType==="sign";
+    return `<div class="question-media ${isSign?"question-media-sign":"question-media-scene"}"><img src="${q.image}" alt="Иллюстрация к вопросу" loading="eager"></div>`
+  }
+  return ""
+}
+function qNavigator(e){
+  return `<div class="qnav">${e.qs.map((_,i)=>`<span class="qnum ${i===e.i?"current":""} ${i<e.i?"done":""}">${i+1}</span>`).join("")}</div>`
+}
+function buildSignTest(){
+  const visual=ROAD_SIGNS.filter(s=>s.imageLocal);
+  const chosen=[...visual].sort(()=>Math.random()-.5).slice(0,Math.min(20,visual.length));
+  return chosen.map((s,idx)=>{
+    let same=ROAD_SIGNS.filter(x=>x.cat===s.cat&&x.id!==s.id);
+    let distract=[...same].sort(()=>Math.random()-.5).slice(0,3);
+    if(distract.length<3)distract.push(...ROAD_SIGNS.filter(x=>x.id!==s.id&&!distract.includes(x)).sort(()=>Math.random()-.5).slice(0,3-distract.length));
+    let answers=[s.name,...distract.map(x=>x.name)].sort(()=>Math.random()-.5);
+    return {id:`sign-${s.id}-${idx}`,topic:s.cat,q:"Что означает этот дорожный знак?",answers,correct:answers.indexOf(s.name),explain:`Знак ${s.id} «${s.name}».`,_signId:s.id,imageType:"sign",official:false}
+  })
+}
+
 function carArt(c,g,extra=""){
   const body=String((g&&g.body)||"").toLowerCase();
   const suv=/suv|кроссовер|внедорож/.test(body);
@@ -46,29 +81,42 @@ function theme(){let x=store.get("theme","auto");document.documentElement.datase
 function p(){let c=st.answers.filter(x=>x.ok).length;return{pct:st.answers.length?Math.round(c/st.answers.length*100):0}}
 function shell(t,l,b){return `<section class="page"><div class="section-head"><div><span class="tag">ПДД+ · Россия · A/B/M</span><h2 style="font-size:clamp(30px,5vw,52px);letter-spacing:-.05em;margin:12px 0 5px">${esc(t)}</h2><p class="lead">${l}</p></div></div>${b}</section>`}
 function home(){let z=p();app.innerHTML=`<section class="page"><div class="hero glass"><div class="hero-copy"><span class="tag">A · B · M / offline PWA</span><h1>ПДД<span style="color:var(--accent)">+</span></h1><p class="lead">Тренажёр, дорожные знаки и автомобильный справочник в одном спокойном интерфейсе.</p><div class="actions"><a class="btn btn-primary" href="#trainer">Начать тренировку →</a><a class="btn" href="#cars">Каталог авто</a></div></div><aside class="hero-side glass"><div class="micro">Точность</div><div class="big-num">${z.pct}%</div><div class="progress"><i style="width:${z.pct}%"></i></div><div class="micro">${st.answers.length} ответов · ${st.mistakes.length} ошибок</div></aside></div><div class="section-head"><div><h3>Один хаб</h3><p>Учёба + справочник + автомобили</p></div></div><div class="grid g3"><a class="card glass card-link" href="#trainer"><div class="feature-icon">✓</div><h3>Тренажёр</h3><p class="muted">75 уникальных тренировочных вопросов, темы и работа над ошибками.</p></a><a class="card glass card-link" href="#signs"><div class="feature-icon">◇</div><h3>Знаки</h3><p class="muted">${ROAD_SIGNS.length} позиций с поиском и изображениями из Wikimedia Commons при доступности.</p></a><a class="card glass card-link" href="#cars"><div class="feature-icon">▰</div><h3>Автомобили</h3><p class="muted">${CAR_CATALOG.length} модели, поколения, VAG и ссылки на обзоры.</p></a></div><div class="notice section">Банк вопросов тренировочный, не официальный банк ГИБДД. Без веб-проверки актуальная редакция на октябрь 2026 не подтверждена.</div></section>`}
-function trainer(){let topics=[...new Set(PDD_QUESTIONS.map(q=>q.topic))].sort();app.innerHTML=shell("Тренажёр","Экзамен, билеты, темы, ошибки и избранное.",`<div class="grid g3 section"><button class="card glass" onclick="PDD.start()" style="color:inherit;text-align:left;border:1px solid var(--line);cursor:pointer"><div class="feature-icon">20</div><h3>Экзамен</h3><p class="muted">20 случайных вопросов.</p></button><a class="card glass card-link" href="#tickets"><div class="feature-icon">${PDD_QUESTIONS.length}</div><h3>Наборы</h3><p class="muted">Практические наборы без имитации официальных билетов ГИБДД.</p></a><a class="card glass card-link" href="#mistakes"><div class="feature-icon">${st.mistakes.length}</div><h3>Ошибки</h3><p class="muted">Повторить сложные вопросы.</p></a></div><div class="section-head"><div><h3>Темы</h3><p>${topics.length} разделов</p></div></div><div class="list">${topics.map(t=>`<button class="row" onclick='PDD.topic(${JSON.stringify(t)})' style="cursor:pointer"><span><strong>${esc(t)}</strong><small>Тематическая тренировка</small></span><span>→</span></button>`).join("")}</div>`)}
-function start(pool=PDD_QUESTIONS,label="Экзамен",limit=20){let qs=[...pool].sort(()=>Math.random()-.5).slice(0,Math.min(limit,pool.length));st.exam={qs,i:0,score:0,label,answered:false};rq()}
+function trainer(){
+  let topics=[...new Set(PDD_QUESTIONS.map(q=>q.topic))].sort();
+  app.innerHTML=shell("Тренажёр","Экзамен, тест по знакам, тематические наборы, ошибки и избранное.",`
+  <div class="grid g4 section">
+    <button class="card glass mode-card" onclick="PDD.start()" ><div class="feature-icon">20</div><h3>Экзамен</h3><p class="muted">20 случайных вопросов с иллюстрациями.</p></button>
+    <button class="card glass mode-card" onclick="PDD.signTest()"><div class="feature-icon">◇</div><h3>Тест по знакам</h3><p class="muted">20 знаков с крупными изображениями, как в экзаменационном режиме.</p></button>
+    <a class="card glass card-link" href="#tickets"><div class="feature-icon">${PDD_QUESTIONS.length}</div><h3>Наборы</h3><p class="muted">Практические наборы по 20 вопросов.</p></a>
+    <a class="card glass card-link" href="#mistakes"><div class="feature-icon">${st.mistakes.length}</div><h3>Ошибки</h3><p class="muted">Повторить сложные вопросы.</p></a>
+  </div>
+  <div class="section-head"><div><h3>Темы</h3><p>${topics.length} разделов</p></div></div>
+  <div class="list">${topics.map(t=>`<button class="row" onclick='PDD.topic(${JSON.stringify(t)})' style="cursor:pointer"><span><strong>${esc(t)}</strong><small>Тематическая тренировка</small></span><span>→</span></button>`).join("")}</div>`)
+}
+function start(pool=PDD_QUESTIONS,label="Экзамен",limit=20){let qs=[...pool].sort(()=>Math.random()-.5).slice(0,Math.min(limit,pool.length));st.exam={qs,i:0,score:0,label,answered:false,history:[]};rq()}
 function rq(){
   let e=st.exam;if(!e||e.i>=e.qs.length)return result();
-  let q=e.qs[e.i],fav=st.favorites.includes(q.id),sg=signFromQuestion(q);
+  let q=e.qs[e.i],fav=st.favorites.includes(q.id);
   app.innerHTML=shell(e.label,`${e.i+1} из ${e.qs.length}`,`
   <div class="question-shell section">
     <article class="question glass">
-      <div class="qtop"><span class="tag">Тренировка · ${esc(q.topic)}</span><button class="round" onclick="PDD.fav(${q.id})" aria-label="В избранное">${fav?"★":"☆"}</button></div>
+      <div class="qtop"><span class="tag">${q._signId?"Тест по знакам":"Тренировка"} · ${esc(q.topic)}</span><button class="round" onclick='PDD.fav(${JSON.stringify(q.id)})' aria-label="В избранное">${fav?"★":"☆"}</button></div>
       <div class="progress" aria-label="Прогресс"><i style="width:${((e.i+1)/e.qs.length)*100}%"></i></div>
-      ${sg?signVisual(sg,"question-sign"):""}
+      ${qMedia(q)}
       <h2>${esc(q.q)}</h2>
       <div class="answers">${q.answers.map((a,i)=>`<button class="answer" onclick="PDD.answer(${i})"><span class="answer-index">${i+1}</span><span>${esc(a)}</span></button>`).join("")}</div>
       <div id="explain"></div>
+      <div class="mobile-question-nav">${qNavigator(e)}</div>
     </article>
     <aside class="card glass side-card">
       <div class="micro">Режим</div><h3>${esc(e.label)}</h3>
       <div class="score-stack"><div><b>${e.score}</b><span>верных</span></div><div><b>${e.i}</b><span>отвечено</span></div></div>
-      <div class="notice">Тренировочный, не официальный банк.</div>
+      ${qNavigator(e)}
+      <div class="notice">Иллюстрации встроены в проект. Тренировочный, не официальный банк.</div>
     </aside>
   </div>`)
 }
-function answer(i){let e=st.exam;if(e.answered)return;e.answered=true;let q=e.qs[e.i],ok=i===q.correct;if(ok)e.score++;st.answers.push({id:q.id,ok,ts:Date.now()});store.set("answers",st.answers);if(ok)st.mistakes=st.mistakes.filter(x=>x!==q.id);else if(!st.mistakes.includes(q.id))st.mistakes.push(q.id);store.set("mistakes",st.mistakes);$$(".answer").forEach((b,n)=>{b.disabled=true;if(n===q.correct)b.classList.add("correct");if(n===i&&!ok)b.classList.add("wrong")});$("#explain").innerHTML=`<div class="explain"><b>${ok?"Верно":"Ошибка"}</b><div class="micro" style="font-size:13px;margin-top:7px">${esc(q.explain)}</div><div class="actions"><button class="btn btn-primary" onclick="PDD.next()">Следующий →</button></div></div>`}
+function answer(i){let e=st.exam;if(e.answered)return;e.answered=true;let q=e.qs[e.i],ok=i===q.correct;if(ok)e.score++;e.history[e.i]=ok;st.answers.push({id:q.id,ok,ts:Date.now()});store.set("answers",st.answers);if(ok)st.mistakes=st.mistakes.filter(x=>x!==q.id);else if(!st.mistakes.includes(q.id))st.mistakes.push(q.id);store.set("mistakes",st.mistakes);$$(".answer").forEach((b,n)=>{b.disabled=true;if(n===q.correct)b.classList.add("correct");if(n===i&&!ok)b.classList.add("wrong")});$("#explain").innerHTML=`<div class="explain"><b>${ok?"Верно":"Ошибка"}</b><div class="micro" style="font-size:13px;margin-top:7px">${esc(q.explain)}</div><div class="actions"><button class="btn btn-primary" onclick="PDD.next()">Следующий →</button></div></div>`}
 function next(){st.exam.i++;st.exam.answered=false;rq()}function result(){let e=st.exam,v=Math.round(e.score/e.qs.length*100);app.innerHTML=shell("Готово",`Результат «${esc(e.label)}».`,`<div class="card glass section"><div class="big-num">${e.score}/${e.qs.length}</div><p class="lead">${v}% правильных</p><div class="progress"><i style="width:${v}%"></i></div><div class="actions"><button class="btn btn-primary" onclick="PDD.start()">Ещё экзамен</button><a class="btn" href="#mistakes">Ошибки</a></div></div>`)}
 function tickets(){
       let packs=[]; for(let i=0;i<PDD_QUESTIONS.length;i+=20) packs.push(PDD_QUESTIONS.slice(i,i+20));
@@ -79,13 +127,13 @@ function stats(){let z=p();app.innerHTML=shell("Прогресс","Хранит�
 function favorites(){let qs=PDD_QUESTIONS.filter(q=>st.favorites.includes(q.id));app.innerHTML=shell("Избранное","Отмеченные вопросы.",qs.length?`<div class="list">${qs.slice(0,100).map(q=>`<div class="row"><span><strong>${esc(q.q)}</strong><small>${esc(q.topic)}</small></span><button class="round" onclick="PDD.fav(${q.id})">★</button></div>`).join("")}</div>`:`<div class="card glass">Пока пусто.</div>`)}
 function signs(){
   let cs=[...new Set(ROAD_SIGNS.map(s=>s.cat))];
-  app.innerHTML=shell("Дорожные знаки",`${ROAD_SIGNS.length} позиций.`,`
+  app.innerHTML=shell("Дорожные знаки",`${ROAD_SIGNS.length} позиций. Ключевые знаки встроены локально, остальные пробуют несколько открытых источников.`,`
     <div class="toolbar signs-toolbar">
       <input class="input" id="sq" placeholder="Номер или название" oninput="PDD.fs()">
       <select class="select" id="sc" onchange="PDD.fs()"><option value="">Все категории</option>${cs.map(c=>`<option>${esc(c)}</option>`).join("")}</select>
     </div>
     <div id="sg" class="sign-grid"></div>
-    <div class="notice section">Если удалённая иллюстрация Wikimedia недоступна, карточка остаётся аккуратной и показывает номер знака вместо пустого блока.</div>`);
+    <div class="notice section">Ключевые знаки работают офлайн. Для остальных приложение автоматически перебирает несколько вариантов открытых изображений Wikimedia; номер показывается только если ни один источник не доступен.</div>`);
   fs()
 }
 function fs(){
@@ -145,5 +193,5 @@ function dataStatus(){
 }
 
 function route(){let h=location.hash.slice(1)||"home";if(h==="home")home();else if(h==="trainer")trainer();else if(h==="tickets")tickets();else if(h==="mistakes")mistakes();else if(h==="favorites")favorites();else if(h==="stats")stats();else if(h==="signs")signs();else if(h==="cars")cars();else if(h==="data")dataStatus();else if(h.startsWith("car-")){let x=h.split("-");car(+x[1],+(x[2]||0))}else home();window.scrollTo({top:0,behavior:"smooth"})}
-window.PDD={start:(a,b,c)=>start(a||PDD_QUESTIONS,b||"Экзамен",c||20),topic:t=>start(PDD_QUESTIONS.filter(q=>q.topic===t),t,20),pack:i=>start(PDD_QUESTIONS.slice(i*20,i*20+20),`Набор ${i+1}`,20),answer,next,fav,fs,fc,car,reset,err:()=>PDD_QUESTIONS.filter(q=>st.mistakes.includes(q.id))};
-theme();window.addEventListener("hashchange",route);route();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();st.deferred=e;let b=$("#installBtn");b.hidden=false;b.onclick=async()=>{st.deferred.prompt();await st.deferred.userChoice;b.hidden=true}})})();
+window.PDD={start:(a,b,c)=>start(a||PDD_QUESTIONS,b||"Экзамен",c||20),signTest:()=>start(buildSignTest(),"Тест по знакам",20),imgNext,topic:t=>start(PDD_QUESTIONS.filter(q=>q.topic===t),t,20),pack:i=>start(PDD_QUESTIONS.slice(i*20,i*20+20),`Набор ${i+1}`,20),answer,next,fav,fs,fc,car,reset,err:()=>PDD_QUESTIONS.filter(q=>st.mistakes.includes(q.id))};
+document.addEventListener("keydown",e=>{if(st.exam&&!st.exam.answered&&["1","2","3","4"].includes(e.key))answer(Number(e.key)-1)});theme();window.addEventListener("hashchange",route);route();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();st.deferred=e;let b=$("#installBtn");b.hidden=false;b.onclick=async()=>{st.deferred.prompt();await st.deferred.userChoice;b.hidden=true}})})();
