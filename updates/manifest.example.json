@@ -1,8 +1,0 @@
-{
-  "version": "2026.10.12.1",
-  "updatedAt": "2026-10-12T12:00:00+03:00",
-  "notes": "Пример манифеста. Замените URLs на ваш проверенный источник.",
-  "questions": "questions.json",
-  "signs": "signs.json",
-  "cars": "cars.json"
-}
