@@ -1,0 +1,29 @@
+ПДД+ v10.0.5
+
+Если у вас уже установлена v10.0.4, заменить на GitHub только:
+- app.js
+- styles.css
+- sw.js
+- data/meta.js
+
+НЕ нужно загружать заново:
+- data/questions.js / data/questions.json
+- data/signs.js
+- data/markings.js
+- data/rules.js
+- tickets-01 ... tickets-07
+- signs-01 ... signs-04
+- markings-01
+- docs/
+- icons/
+
+После публикации GitHub Pages:
+1. Ctrl+Shift+R
+2. Если PWA показывает старую версию: DevTools → Application → Service Workers → Unregister → Reload
+
+Что проверить:
+- Тренажёр → Билеты → открывается выбор 1–40
+- выбранный билет: 20 вопросов + 20:00
+- Экзамен: 20:00
+- Марафон: без таймера
+- при 00:00 тест автоматически завершается

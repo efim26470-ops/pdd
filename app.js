@@ -10,6 +10,7 @@ if(hasCompatibleSync){
 const BANK_KEY=hasCompatibleSync?`sync:${synced.version}`:"pdf:pddmaster-12.1";
 const st={answers:store.get("answers:"+BANK_KEY,[]),mistakes:store.get("mistakes:"+BANK_KEY,[]),favorites:store.get("favorites:"+BANK_KEY,[]),favoriteItems:store.get("favoriteItems:"+BANK_KEY,{}),exam:null,deferred:null};
 const signView={limit:32,key:""};
+let examTimerHandle=0;
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
 const MEDIA_API="https://commons.wikimedia.org/w/api.php";
@@ -368,13 +369,37 @@ function home(){
   <div class="notice section">Документы «Правила», «Знаки» и «Разметка» помечены в самих PDF как обновлённые 1 марта 2023 года. Сайт воспроизводит предоставленные материалы и не подменяет их более новыми данными.</div>
   </section>`
 }
+
+function tickets(){
+  stopExamTimer();
+  const nums=[...new Set(PDD_QUESTIONS.map(q=>Number(q.ticket)).filter(n=>Number.isFinite(n)))].sort((a,b)=>a-b);
+  app.innerHTML=shell("Билеты ПДД","Выберите билет. В каждом билете 20 вопросов и 20 минут на решение.",`
+    <section class="tickets-overview glass section">
+      <div><span class="tag">A · B · M</span><h2>40 официальных билетов</h2><p class="muted">Вопросы идут в исходной нумерации PDF. Таймер начинается после открытия билета.</p></div>
+      <div class="ticket-time-badge"><b>20:00</b><span>на билет</span></div>
+    </section>
+    <div class="ticket-grid section">
+      ${nums.map(n=>{
+        const qs=PDD_QUESTIONS.filter(q=>Number(q.ticket)===n);
+        const imgs=qs.filter(q=>q.image).length;
+        return `<button class="ticket-card glass" onclick="PDD.ticket(${n})">
+          <span class="ticket-no">${n}</span>
+          <span class="ticket-copy"><b>Билет ${n}</b><small>${qs.length} вопросов${imgs?` · ${imgs} илл.`:""}</small></span>
+          <span class="ticket-arrow">→</span>
+        </button>`
+      }).join("")}
+    </div>
+    <div class="notice section">Таймер действует только в режиме «Экзамен» и при решении отдельного билета. В марафоне ограничения по времени нет.</div>
+  `)
+}
+
 function trainer(){
   app.innerHTML=shell("Тренажёр","Режимы поверх импортированного банка из 800 вопросов.",`
   <div class="grid g4 section">
-    <button class="card glass mode-card" onclick="PDD.start()"><div class="feature-icon">20</div><h3>Экзамен</h3><p class="muted">20 случайных вопросов из PDF.</p></button>
-    <a class="card glass card-link" href="#tickets"><div class="feature-icon">40</div><h3>Билеты</h3><p class="muted">40 × 20 в исходной нумерации PDF.</p></a>
+    <button class="card glass mode-card" onclick="PDD.exam()"><div class="feature-icon">20</div><h3>Экзамен</h3><p class="muted">20 случайных вопросов · 20 минут.</p></button>
+    <a class="card glass card-link" href="#tickets"><div class="feature-icon">40</div><h3>Билеты</h3><p class="muted">Выбор 1–40 · по 20 минут на билет.</p></a>
     <button class="card glass mode-card" onclick="PDD.daily()"><div class="feature-icon">☀</div><h3>Тест дня</h3><p class="muted">20 вопросов, одинаковых в течение дня.</p></button>
-    <button class="card glass mode-card" onclick="PDD.marathon()"><div class="feature-icon">∞</div><h3>Марафон</h3><p class="muted">100 вопросов подряд.</p></button>
+    <button class="card glass mode-card" onclick="PDD.marathon()"><div class="feature-icon">∞</div><h3>Марафон</h3><p class="muted">100 вопросов подряд · без таймера.</p></button>
     <button class="card glass mode-card" onclick="PDD.hard()"><div class="feature-icon">!</div><h3>Сложные</h3><p class="muted">На основе ваших ошибок.</p></button>
     <a class="card glass card-link" href="#mistakes"><div class="feature-icon">${st.mistakes.length}</div><h3>Ошибки</h3><p class="muted">Повтор неверных ответов.</p></a>
     <button class="card glass mode-card" onclick="PDD.signTest()"><div class="feature-icon">◇</div><h3>Тест по знакам</h3><p class="muted">Знаки из предоставленного znaki.pdf.</p></button><button class="card glass mode-card" onclick="PDD.markingTest()"><div class="feature-icon">═</div><h3>Тест по разметке</h3><p class="muted">Изображения из razmetka.pdf.</p></button>
@@ -382,9 +407,58 @@ function trainer(){
   </div>
   <div class="notice section">В режиме билетов вопросы и правильные ответы идут в той же нумерации, что и в предоставленном PDF. Иллюстрации показываются только там, где они есть в исходном файле.</div>`)
 }
-function start(pool=PDD_QUESTIONS,label="Экзамен",limit=20,shuffle=true){
-  let qs=[...pool];if(shuffle)qs.sort(()=>Math.random()-.5);qs=qs.slice(0,Math.min(limit,qs.length));
-  st.exam={qs,i:0,score:0,label,answered:false,history:[],choices:[],startedAt:Date.now(),autoFavAdded:0};rq()
+function stopExamTimer(){
+  if(examTimerHandle){clearInterval(examTimerHandle);examTimerHandle=0}
+}
+function remainingMs(e=st.exam){
+  if(!e||!e.timed||!e.deadline)return 0;
+  return Math.max(0,e.deadline-Date.now())
+}
+function timerText(ms){
+  const sec=Math.max(0,Math.ceil(ms/1000));
+  const m=Math.floor(sec/60),s=sec%60;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`
+}
+function paintExamTimer(){
+  const e=st.exam;
+  if(!e||!e.timed)return;
+  const left=remainingMs(e);
+  $$(".exam-timer-value").forEach(el=>{
+    el.textContent=timerText(left);
+    el.classList.toggle("timer-warning",left<=5*60*1000&&left>60*1000);
+    el.classList.toggle("timer-danger",left<=60*1000)
+  });
+  if(left<=0&&!e.finished){
+    stopExamTimer();
+    e.timedOut=true;
+    e.finished=true;
+    result()
+  }
+}
+function armExamTimer(){
+  stopExamTimer();
+  const e=st.exam;
+  if(!e||!e.timed)return;
+  paintExamTimer();
+  examTimerHandle=setInterval(paintExamTimer,1000)
+}
+function examStart(){
+  start(PDD_QUESTIONS,"Экзамен",20,true,{timed:true,durationMs:20*60*1000,mode:"exam"})
+}
+function start(pool=PDD_QUESTIONS,label="Тренировка",limit=20,shuffle=true,opts={}){
+  stopExamTimer();
+  let qs=[...pool];
+  if(shuffle)qs.sort(()=>Math.random()-.5);
+  qs=qs.slice(0,Math.min(limit,qs.length));
+  const timed=!!opts.timed;
+  const durationMs=timed?(Number(opts.durationMs)||20*60*1000):0;
+  const startedAt=Date.now();
+  st.exam={
+    qs,i:0,score:0,label,answered:false,history:[],choices:[],startedAt,autoFavAdded:0,
+    timed,durationMs,timeLimitMs:durationMs,deadline:timed?startedAt+durationMs:0,
+    timedOut:false,finished:false,mode:opts.mode||"practice",ticket:opts.ticket||null
+  };
+  rq()
 }
 function rq(){
   let e=st.exam;if(!e||e.i>=e.qs.length)return result();
@@ -392,7 +466,7 @@ function rq(){
   app.innerHTML=shell(e.label,`${e.i+1} из ${e.qs.length}`,`
   <div class="question-shell section">
     <article class="question glass">
-      <div class="qtop"><span class="tag">${q.sourceKind==="uploaded_pdf"?`Билет ${q.ticket} · вопрос ${q.questionNo}`:(q._signId?"Тест по знакам":esc(q.topic))}</span><button class="round" onclick='PDD.fav(${JSON.stringify(q.id)})' aria-label="В избранное">${fav?"★":"☆"}</button></div>
+      <div class="qtop"><span class="tag">${q.sourceKind==="uploaded_pdf"?`Билет ${q.ticket} · вопрос ${q.questionNo}`:(q._signId?"Тест по знакам":esc(q.topic))}</span><div class="qtop-actions">${e.timed?`<span class="timer-pill"><span>⏱</span><b class="exam-timer-value">${timerText(remainingMs(e))}</b></span>`:""}<button class="round" onclick='PDD.fav(${JSON.stringify(q.id)})' aria-label="В избранное">${fav?"★":"☆"}</button></div></div>
       <div class="progress" aria-label="Прогресс"><i style="width:${((e.i+1)/e.qs.length)*100}%"></i></div>
       ${qMedia(q)}
       <h2>${esc(q.q)}</h2>
@@ -402,11 +476,13 @@ function rq(){
     </article>
     <aside class="card glass side-card">
       <div class="micro">Режим</div><h3>${esc(e.label)}</h3>
+      ${e.timed?`<div class="side-timer"><span>Осталось</span><b class="exam-timer-value">${timerText(remainingMs(e))}</b></div>`:""}
       <div class="score-stack"><div><b>${e.score}</b><span>верных</span></div><div><b>${e.i}</b><span>отвечено</span></div></div>
       ${qNavigator(e)}
       <div class="notice">${q.sourceKind==="uploaded_pdf"?`Источник: PDF · стр. ${q.sourcePage}${q.image?" · исходное изображение":""}`:"Справочный тренировочный режим."}</div>
     </aside>
-  </div>`)
+  </div>`);
+  if(e.timed)armExamTimer()
 }
 
 function signSourceExplanation(sign){
@@ -441,7 +517,8 @@ function signSourceExplanation(sign){
 }
 
 function answer(i){
-  let e=st.exam;if(e.answered)return;
+  let e=st.exam;if(!e||e.answered||e.finished)return;
+  if(e.timed&&remainingMs(e)<=0){e.timedOut=true;e.finished=true;result();return}
   e.answered=true;
   let q=e.qs[e.i],ok=i===q.correct;
   if(ok)e.score++;
@@ -713,12 +790,15 @@ function formatDuration(ms){
 }
 function result(){
   const e=st.exam;if(!e)return;
+  stopExamTimer();
+  e.finished=true;
   const total=e.qs.length;
   const correct=e.history.filter(x=>x===true).length;
   const wrong=e.history.filter(x=>x===false).length;
   const unanswered=Math.max(0,total-correct-wrong);
   const pct=total?Math.round(correct/total*100):0;
-  const duration=Date.now()-(e.startedAt||Date.now());
+  const rawDuration=Date.now()-(e.startedAt||Date.now());
+  const duration=e.timed?Math.min(rawDuration,e.timeLimitMs||rawDuration):rawDuration;
   const avg=total?Math.round(duration/total/1000):0;
   const wrongRows=e.qs.map((q,i)=>({q,i,ok:e.history[i],choice:e.choices?.[i]})).filter(x=>x.ok===false);
 
@@ -736,9 +816,9 @@ function result(){
     <section class="result-hero glass section">
       <div class="result-ring" style="${ringStyle}"><div><b>${pct}%</b><span>выполнено</span></div></div>
       <div class="result-copy">
-        <span class="tag">${esc(e.label)}</span>
+        <span class="tag">${esc(e.label)}</span>${e.timedOut?`<span class="tag timeout-tag">Время вышло</span>`:""}
         <h2>${grade}</h2>
-        <p class="muted">Отвечено ${correct+wrong} из ${total}. ${wrong?`Ошибочные вопросы уже добавлены в избранное.`:"Ошибок нет."}</p>
+        <p class="muted">${e.timedOut?`Время вышло. `:""}Отвечено ${correct+wrong} из ${total}${unanswered?` · не отвечено ${unanswered}`:""}. ${wrong?`Ошибочные вопросы уже добавлены в избранное.`:"Ошибок нет."}</p>
       </div>
     </section>
 
@@ -786,15 +866,16 @@ function reviewLastErrors(){
 }
 function retryTest(){
   const e=st.exam;if(!e)return;
-  start(e.qs,e.label,e.qs.length,false)
+  start(e.qs,e.label,e.qs.length,false,{timed:e.timed,durationMs:e.timeLimitMs,mode:e.mode,ticket:e.ticket})
 }
 
 function next(){
   let e=st.exam;
-  if(!e)return;
+  if(!e||e.finished)return;
+  if(e.timed&&remainingMs(e)<=0){e.timedOut=true;e.finished=true;result();return}
   e.i++;
   e.answered=false;
-  if(e.i>=e.qs.length)result();
+  if(e.i>=e.qs.length){e.finished=true;result()}
   else rq()
 }
 function fav(id){
@@ -823,7 +904,7 @@ function daily(){
   const pool=[...PDD_QUESTIONS].sort((a,b)=>idHash(key+"-"+a.id)-idHash(key+"-"+b.id)).slice(0,20);
   start(pool,"Тест дня",20,false)
 }
-function marathon(){start(PDD_QUESTIONS,"Марафон · 100",Math.min(100,PDD_QUESTIONS.length),true)}
+function marathon(){start(PDD_QUESTIONS,"Марафон · 100",Math.min(100,PDD_QUESTIONS.length),true,{timed:false,mode:"marathon"})}
 function hard(){
   const m=new Map();
   st.answers.forEach(a=>{let k=String(a.id),x=m.get(k)||{n:0,w:0};x.n++;if(!a.ok)x.w++;m.set(k,x)});
@@ -945,13 +1026,13 @@ function dataStatus(){
   <div class="notice section">Сборка ${PDD_META.build}. PDF сообщает, что экзаменационные билеты достаточно часто меняются и рекомендует проверять свежую версию. Сайт воспроизводит именно предоставленный файл.</div>`)
 }
 
-function route(){let h=location.hash.slice(1)||"home";if(h==="home")home();else if(h==="trainer")trainer();else if(h==="tickets")tickets();else if(h==="mistakes")mistakes();else if(h==="favorites")favorites();else if(h==="stats")stats();else if(h==="signs")signs();else if(h==="markings")markings();else if(h==="rules")rules();else if(h==="cars")cars();else if(h==="bank")bank();else if(h==="updates")updates();else if(h==="data")dataStatus();else if(h.startsWith("car-")){let x=h.split("-");car(+x[1],+(x[2]||0))}else home();window.scrollTo({top:0,behavior:"smooth"})}
-window.PDD={reviewLastErrors,retryTest,favQs:favoriteQuestions,mediaError,
+function route(){stopExamTimer();let h=location.hash.slice(1)||"home";if(h==="home")home();else if(h==="trainer")trainer();else if(h==="tickets")tickets();else if(h==="mistakes")mistakes();else if(h==="favorites")favorites();else if(h==="stats")stats();else if(h==="signs")signs();else if(h==="markings")markings();else if(h==="rules")rules();else if(h==="cars")cars();else if(h==="bank")bank();else if(h==="updates")updates();else if(h==="data")dataStatus();else if(h.startsWith("car-")){let x=h.split("-");car(+x[1],+(x[2]||0))}else home();window.scrollTo({top:0,behavior:"smooth"})}
+window.PDD={exam:examStart,reviewLastErrors,retryTest,favQs:favoriteQuestions,mediaError,
   start:(a,b,c,d)=>start(a||PDD_QUESTIONS,b||"Экзамен",c||20,d!==undefined?d:true),
   signTest:()=>start(PDD_QUESTIONS.filter(q=>q.type==="sign_name").length?PDD_QUESTIONS.filter(q=>q.type==="sign_name"):buildSignTest(),"Тест по знакам",20,true),
   signNumbers,daily,marathon,hard,signCat:signCategory,signOne,markingTest:()=>start(buildMarkingTest(),"Тест по разметке",20,true),
   imgNext,topic:t=>start(PDD_QUESTIONS.filter(q=>q.topic===t),t,20,true),
-  ticket:t=>start(PDD_QUESTIONS.filter(q=>q.ticket===t),`Билет ${t}`,20,false),
+  ticket:t=>start(PDD_QUESTIONS.filter(q=>Number(q.ticket)===Number(t)),`Билет ${t}`,20,false,{timed:true,durationMs:20*60*1000,mode:"ticket",ticket:Number(t)}),
   pack:i=>start(PDD_QUESTIONS.slice(i*20,i*20+20),`Набор ${i+1}`,20,false),
   answer,next,fav,fs,moreSigns,fm,frules:filterRules,rulePage:renderRulePage,fc,fb:filterBank,single,car,reset,
   update:()=>checkUpdates(false),resetSynced,resetMediaCache,
