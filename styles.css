@@ -1119,3 +1119,28 @@ html[data-theme="light"] .question-media.real-loaded{background:#eee}
   .ticket-grid{grid-template-columns:1fr}
   .timer-pill{padding:7px 9px}
 }
+
+
+/* ---- v10.0.6: verified PDD explanations + safe fallback comments ---- */
+.pdd-explanation-fallback{
+  border-style:solid!important;
+  border-color:color-mix(in srgb,var(--accent) 22%,var(--line))!important;
+}
+.pdd-explanation-fallback p{
+  margin:0;
+  color:var(--text);
+  font-size:13px;
+  line-height:1.62;
+}
+.source-badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--muted);
+  font-size:10px;
+  white-space:nowrap;
+}

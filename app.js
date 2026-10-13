@@ -568,7 +568,7 @@ function answer(i){
   const genericPDD=hasPDD
     ? `<div class="pdd-explanation">
         <div class="pdd-explanation-head">
-          <div><span class="micro">Пояснение по ПДД · проверено по теме вопроса</span><h4>Почему этот ответ правильный</h4></div>
+          <div><span class="micro">Пояснение по ПДД · пункт сопоставлен с вопросом</span><h4>Почему этот ответ правильный</h4></div>
           <a class="btn pdd-source-btn" href="docs/pravilaPDD.pdf#page=${q.explainPDDPage}" target="_blank" rel="noopener">ПДД · п. ${esc(q.explainPDDPoint||"—")} · стр. ${q.explainPDDPage} ↗</a>
         </div>
         <blockquote>${esc(q.explainPDD)}</blockquote>
@@ -586,9 +586,16 @@ function answer(i){
   }else if(genericPDD){
     explanation=genericPDD;
   }else{
-    explanation=`<div class="pdd-explanation pdd-explanation-missing">
-      <div class="pdd-explanation-head"><div><span class="micro">Пояснение</span><h4>Точный источник для пояснения не найден</h4></div></div>
-      <p>Правильный ответ подтверждён исходным билетом, но сайт не подставляет случайный пункт ПДД вместо подходящего объяснения.</p>
+    explanation=`<div class="pdd-explanation pdd-explanation-fallback">
+      <div class="pdd-explanation-head">
+        <div>
+          <span class="micro">Справочный комментарий</span>
+          <h4>Пояснение к правильному ответу</h4>
+        </div>
+        <span class="source-badge">по исходному билету</span>
+      </div>
+      <p>${esc(q.explainFallback||`Правильный ответ: ${correctText}.`)}</p>
+      <div class="source-footnote">Это не цитата конкретного пункта ПДД. Правильный вариант сверён с таблицей ответов исходного билета; случайный пункт правил не подставляется.</div>
     </div>`;
   }
 
